@@ -1,0 +1,23 @@
+{
+  "context": 14000,
+  "counts": {
+    "PLAUSIBLE": 1
+  },
+  "runs": [
+    {
+      "type": "run_summary",
+      "bug_id": "Lang-4",
+      "outcome": "PLAUSIBLE",
+      "turns_used": 8,
+      "model": "qwen32b",
+      "total_tokens_in": 11791,
+      "total_tokens_out": 588,
+      "wall_clock_s": 268.3,
+      "edits_applied": 1,
+      "fix_attempts": 1,
+      "escalation": null,
+      "ts": "2026-09-16T10:54:12.437191+00:00",
+      "run_id": "Lang-4_qwen32b_fsm_20260916T161944"
+    }
+  ]
+}
