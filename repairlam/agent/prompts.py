@@ -42,6 +42,9 @@ Find the method named in the stack trace and read the lines around it.""",
 
     "TRY_FIX": """CURRENT PHASE: TRY_FIX
 Goal: make one minimal edit, then verify it.
+You have already read the relevant code. Commit to a hypothesis and edit NOW.
+Do not keep reading. A wrong edit is better than no edit: run_tests will tell
+you if it is wrong and you can revise.
 Allowed tools: apply_edit, run_tests, read_file, finish, escalate.
 Make a small anchored edit, then run_tests.
 If tests pass, call finish.""",
@@ -57,7 +60,7 @@ same assertion keeps failing, call escalate.""",
 ALLOWED = {
     "UNDERSTAND": {"get_test_output", "read_file", "search_repo"},
     "COLLECT":    {"search_repo", "read_file", "get_test_output"},
-    "TRY_FIX":    {"apply_edit", "run_tests", "read_file", "finish", "escalate"},
+    "TRY_FIX":    {"apply_edit", "run_tests", "read_file", "search_repo", "finish", "escalate"},
     "REFLECT":    {"read_file", "search_repo", "apply_edit", "run_tests", "escalate"},
 }
 

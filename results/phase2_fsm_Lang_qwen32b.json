@@ -1,23 +1,23 @@
 {
   "context": 14000,
   "counts": {
-    "PLAUSIBLE": 1
+    "ESCALATED": 1
   },
   "runs": [
     {
       "type": "run_summary",
-      "bug_id": "Lang-4",
-      "outcome": "PLAUSIBLE",
-      "turns_used": 8,
+      "bug_id": "Lang-22",
+      "outcome": "ESCALATED",
+      "turns_used": 21,
       "model": "qwen32b",
-      "total_tokens_in": 11791,
-      "total_tokens_out": 588,
-      "wall_clock_s": 268.3,
+      "total_tokens_in": 40941,
+      "total_tokens_out": 1726,
+      "wall_clock_s": 161.5,
       "edits_applied": 1,
       "fix_attempts": 1,
-      "escalation": null,
-      "ts": "2026-09-16T10:54:12.437191+00:00",
-      "run_id": "Lang-4_qwen32b_fsm_20260916T161944"
+      "escalation": "ESCALATE\nreason: The 'proper()' method and 'getReducedFraction(int, int)' method do not exist in the Fraction class. I need to find the correct method to reduce the fraction to its proper form.\nquestion: What is the correct method to reduce a fraction to its proper form in the Fraction class?",
+      "ts": "2026-09-16T13:54:33.759549+00:00",
+      "run_id": "Lang-22_qwen32b_fsm_20260916T192152"
     }
   ]
 }

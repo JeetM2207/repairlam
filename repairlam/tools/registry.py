@@ -108,6 +108,10 @@ class Dispatcher:
         return ToolResult("ok", search_repo(self.workdir, a["pattern"]))
 
     def _apply_edit(self, a):
+        if "/test/" in a["path"] or a["path"].endswith("Test.java"):
+            return ToolResult("rejected",
+                              "editing test files is not allowed; fix the "
+                              "source code instead")
         r = apply_edit(f"{self.workdir}/{a['path']}", a["find"], a["replace"])
         if not r.ok:
             return ToolResult("rejected", r.message)

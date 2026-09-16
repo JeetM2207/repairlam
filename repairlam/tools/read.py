@@ -3,7 +3,7 @@ import re
 from pathlib import Path
 
 MAX_READ_LINES = 120
-MAX_MATCHES = 25
+MAX_MATCHES = 40
 MAX_TRACE_HEAD = 40
 MAX_TRACE_TAIL = 20
 
@@ -41,9 +41,11 @@ def search_repo(workdir, pattern: str, glob: str = "*.java") -> str:
 
     hits = []
     src = Path(workdir)
-    for f in src.rglob(glob):
+    files = sorted(src.rglob(glob),
+                   key=lambda f: ("/test/" in str(f), str(f)))
+    for f in files:
         s = str(f)
-        if "/test/" in s or "/build/" in s or "/target/" in s:
+        if "/build/" in s or "/target/" in s or "/classes/" in s:
             continue
         try:
             for i, line in enumerate(f.read_text(errors="replace").splitlines(), 1):

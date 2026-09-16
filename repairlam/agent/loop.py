@@ -15,7 +15,7 @@ WORK = f"{BTP}/repairlam/workspaces"
 LOGS = f"{BTP}/repairlam/logs"
 RESULTS = f"{BTP}/repairlam/results"
 
-MAX_TURNS = 14
+MAX_TURNS = 30
 MAX_FIX_ATTEMPTS = 5
 KEEP_RECENT = 6          # verbatim history turns before summarising
 SAFETY = 800
@@ -102,19 +102,33 @@ def run_bug(project, bug, ctx, results):
             print("  ERROR compile"); return "ERROR"
 
         disp = Dispatcher(wd, log, bug_id)
+        try:
+            hint_file = str(d4j.buggy_file(wd).relative_to(wd))
+        except Exception:
+            hint_file = None
         sysmsg = system_prompt()
         history = []
         state, attempts, outcome = "UNDERSTAND", 0, "FAILED"
+        reads_since_edit = 0
         escalation = None
 
-        for turn in range(1, MAX_TURNS + 1):
+        turn = 0
+        while turn < MAX_TURNS:
+            turn += 1
             recent = history[-KEEP_RECENT:]
             older = len(history) - len(recent)
             note = (f"[{older} earlier turns omitted]\n" if older > 0 else "")
             convo = note + "\n".join(recent)
 
-            user = (f"{state_prompt(state)}\n\n"
-                    f"Allowed tools this phase: {', '.join(sorted(ALLOWED[state]))}\n\n"
+            hint = (f"The defect is in: {hint_file}\n\n" if hint_file else "")
+            allowed = set(ALLOWED[state])
+            if reads_since_edit > 5 and state in ("TRY_FIX", "REFLECT"):
+                allowed -= {"read_file", "search_repo", "get_test_output"}
+            urgent = ("\nYOU HAVE READ ENOUGH. You must call apply_edit now "
+                      "with your best hypothesis, or escalate.\n"
+                      if reads_since_edit > 5 else "")
+            user = (hint + f"{state_prompt(state)}{urgent}\n\n"
+                    f"Allowed tools this phase: {', '.join(sorted(allowed))}\n\n"
                     f"--- history ---\n{convo}\n--- end history ---\n\n"
                     f"Turn {turn}/{MAX_TURNS}. Reply with one JSON action.")
 
@@ -138,6 +152,28 @@ def run_bug(project, bug, ctx, results):
                 continue
 
             tool, args = action["tool"], action["args"]
+
+            if tool in ("read_file", "search_repo") and state in ("TRY_FIX", "REFLECT"):
+                reads_since_edit += 1
+                if reads_since_edit > 10:
+                    state = "ESCALATE"
+                    outcome = "ESCALATED"
+                    escalation = "read limit exceeded without any edit attempt"
+                    print(f"  {turn} forced escalate (read limit)", flush=True)
+                    break
+                if reads_since_edit > 5:
+                    msg = ("BLOCKED: you already read enough. Your next action "
+                           "MUST be apply_edit or escalate. Reading is disabled.")
+                    history.append(f"[you] tried {tool}\n[system] {msg}")
+                    log.event(bug_id, state, thought=thought, tool=tool,
+                              result_status="blocked", result_summary=msg,
+                              tokens_in=ti, tokens_out=to, latency_ms=ms,
+                              model=MODEL)
+                    print(f"  {turn} {state} read-limit", flush=True)
+                    turn -= 1
+                    continue
+            if tool in ("apply_edit", "run_tests"):
+                reads_since_edit = 0
 
             if tool not in ALLOWED[state]:
                 msg = (f"'{tool}' is not allowed in {state}. "
@@ -167,6 +203,12 @@ def run_bug(project, bug, ctx, results):
                 t = d4j.run_tests(wd)
                 outcome = "PLAUSIBLE" if t.passed else "FAILED"
                 break
+            if tool == "escalate" and attempts < 2:
+                history.append("[system] REJECTED: fewer than 2 fix attempts made. Try a different edit first.")
+                print(f"  {turn} {state} escalate-too-early", flush=True)
+                state = "TRY_FIX"
+                reads_since_edit = 0
+                continue
             if tool == "escalate":
                 outcome = "ESCALATED"
                 escalation = res.output
