@@ -1,0 +1,104 @@
+{
+  "counts": {
+    "TOO_LARGE": 12,
+    "FAILED": 8
+  },
+  "runs": [
+    {
+      "type": "run_summary",
+      "bug_id": "Lang-4",
+      "outcome": "FAILED",
+      "turns_used": 3,
+      "model": "qwen32b",
+      "total_tokens_in": 796,
+      "total_tokens_out": 681,
+      "wall_clock_s": 187.9,
+      "ts": "2026-09-16T09:57:05.143524+00:00",
+      "run_id": "Lang-4_qwen32b_oneshot_20260916T1523"
+    },
+    {
+      "type": "run_summary",
+      "bug_id": "Lang-5",
+      "outcome": "FAILED",
+      "turns_used": 3,
+      "model": "qwen32b",
+      "total_tokens_in": 2715,
+      "total_tokens_out": 2502,
+      "wall_clock_s": 285.1,
+      "ts": "2026-09-16T10:01:50.268814+00:00",
+      "run_id": "Lang-5_qwen32b_oneshot_20260916T1527"
+    },
+    {
+      "type": "run_summary",
+      "bug_id": "Lang-6",
+      "outcome": "FAILED",
+      "turns_used": 3,
+      "model": "qwen32b",
+      "total_tokens_in": 1151,
+      "total_tokens_out": 962,
+      "wall_clock_s": 198.0,
+      "ts": "2026-09-16T10:05:08.300790+00:00",
+      "run_id": "Lang-6_qwen32b_oneshot_20260916T1531"
+    },
+    {
+      "type": "run_summary",
+      "bug_id": "Lang-11",
+      "outcome": "FAILED",
+      "turns_used": 3,
+      "model": "qwen32b",
+      "total_tokens_in": 3130,
+      "total_tokens_out": 2994,
+      "wall_clock_s": 310.2,
+      "ts": "2026-09-16T10:15:26.189459+00:00",
+      "run_id": "Lang-11_qwen32b_oneshot_20260916T1540"
+    },
+    {
+      "type": "run_summary",
+      "bug_id": "Lang-12",
+      "outcome": "FAILED",
+      "turns_used": 3,
+      "model": "qwen32b",
+      "total_tokens_in": 3107,
+      "total_tokens_out": 2894,
+      "wall_clock_s": 279.0,
+      "ts": "2026-09-16T10:20:05.257749+00:00",
+      "run_id": "Lang-12_qwen32b_oneshot_20260916T1545"
+    },
+    {
+      "type": "run_summary",
+      "bug_id": "Lang-13",
+      "outcome": "FAILED",
+      "turns_used": 3,
+      "model": "qwen32b",
+      "total_tokens_in": 2308,
+      "total_tokens_out": 2172,
+      "wall_clock_s": 241.9,
+      "ts": "2026-09-16T10:24:07.187354+00:00",
+      "run_id": "Lang-13_qwen32b_oneshot_20260916T1550"
+    },
+    {
+      "type": "run_summary",
+      "bug_id": "Lang-17",
+      "outcome": "FAILED",
+      "turns_used": 3,
+      "model": "qwen32b",
+      "total_tokens_in": 1186,
+      "total_tokens_out": 972,
+      "wall_clock_s": 109.2,
+      "ts": "2026-09-16T10:27:54.292596+00:00",
+      "run_id": "Lang-17_qwen32b_oneshot_20260916T1556"
+    },
+    {
+      "type": "run_summary",
+      "bug_id": "Lang-19",
+      "outcome": "FAILED",
+      "turns_used": 3,
+      "model": "qwen32b",
+      "total_tokens_in": 813,
+      "total_tokens_out": 657,
+      "wall_clock_s": 97.8,
+      "ts": "2026-09-16T10:29:32.096295+00:00",
+      "run_id": "Lang-19_qwen32b_oneshot_20260916T1557"
+    }
+  ]
+}
