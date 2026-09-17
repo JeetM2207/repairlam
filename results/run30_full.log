@@ -1,0 +1,1048 @@
+server context: 14000
+FSM agent on 30 Lang bugs with qwen32b
+
+=== Lang-1 ===
+  1 UNDERSTAND get_test_output  ok
+  2 UNDERSTAND read_file        ok
+  3 COLLECT    read_file        ok
+  4 TRY_FIX    read_file        ok
+  5 TRY_FIX    read_file        ok
+  6 TRY_FIX    read_file        ok
+  7 TRY_FIX read-limit
+  7 TRY_FIX read-limit
+  7 TRY_FIX read-limit
+  7 TRY_FIX    apply_edit       rejected
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 forced escalate (read limit)
+  -> ESCALATED (0 edits)
+
+=== Lang-3 ===
+  1 UNDERSTAND get_test_output  ok
+  2 UNDERSTAND read_file        ok
+  3 COLLECT    read_file        ok
+  4 TRY_FIX    read_file        ok
+  5 TRY_FIX    read_file        ok
+  6 TRY_FIX    read_file        ok
+  7 TRY_FIX read-limit
+  7 TRY_FIX read-limit
+  7 TRY_FIX    apply_edit       ok
+  8 TRY_FIX    run_tests        ok
+  9 REFLECT    apply_edit       rejected
+  10 TRY_FIX    read_file        ok
+  11 TRY_FIX    read_file        ok
+  12 TRY_FIX    apply_edit       rejected
+  13 TRY_FIX    read_file        ok
+  14 TRY_FIX read-limit
+  14 TRY_FIX read-limit
+  14 TRY_FIX read-limit
+  14 TRY_FIX read-limit
+  14 TRY_FIX    escalate         ok
+  14 TRY_FIX escalate-too-early
+  15 TRY_FIX    apply_edit       rejected
+  16 TRY_FIX    read_file        ok
+  17 TRY_FIX    read_file        ok
+  18 TRY_FIX    apply_edit       rejected
+  19 TRY_FIX    apply_edit       ok
+  20 TRY_FIX    run_tests        ok
+  21 REFLECT    apply_edit       rejected
+  22 TRY_FIX    apply_edit       ok
+  23 TRY_FIX    run_tests        ok
+  24 REFLECT    read_file        ok
+  25 REFLECT    apply_edit       ok
+  26 TRY_FIX    run_tests        ok
+  27 REFLECT blocked get_test_output
+  28 REFLECT    run_tests        ok
+  29 REFLECT blocked get_test_output
+  30 REFLECT blocked get_test_output
+  -> TIMEOUT (4 edits)
+
+=== Lang-4 ===
+  1 UNDERSTAND get_test_output  ok
+  2 UNDERSTAND read_file        ok
+  3 COLLECT    read_file        ok
+  4 TRY_FIX    read_file        ok
+  5 TRY_FIX    read_file        ok
+  6 TRY_FIX    read_file        ok
+  7 TRY_FIX read-limit
+  7 TRY_FIX    apply_edit       rejected
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX    escalate         ok
+  8 TRY_FIX escalate-too-early
+  9 TRY_FIX    apply_edit       rejected
+  10 TRY_FIX    read_file        ok
+  11 TRY_FIX    read_file        ok
+  12 TRY_FIX    read_file        ok
+  13 TRY_FIX read-limit
+  13 TRY_FIX    apply_edit       rejected
+  14 TRY_FIX read-limit
+  14 TRY_FIX read-limit
+  14 TRY_FIX read-limit
+  14 TRY_FIX read-limit
+  14 TRY_FIX read-limit
+  14 TRY_FIX    escalate         ok
+  14 TRY_FIX escalate-too-early
+  15 TRY_FIX    search_repo      ok
+  16 TRY_FIX    search_repo      ok
+  17 TRY_FIX    read_file        ok
+  18 TRY_FIX read-limit
+  18 TRY_FIX read-limit
+  18 TRY_FIX    apply_edit       rejected
+  19 TRY_FIX read-limit
+  19 TRY_FIX    escalate         ok
+  19 TRY_FIX escalate-too-early
+  20 TRY_FIX    read_file        ok
+  21 TRY_FIX    read_file        ok
+  22 TRY_FIX    read_file        ok
+  23 TRY_FIX read-limit
+  23 TRY_FIX read-limit
+  23 TRY_FIX    apply_edit       rejected
+  24 TRY_FIX read-limit
+  24 TRY_FIX read-limit
+  24 TRY_FIX    escalate         ok
+  24 TRY_FIX escalate-too-early
+  25 TRY_FIX    read_file        ok
+  26 TRY_FIX    read_file        ok
+  27 TRY_FIX    read_file        ok
+  28 TRY_FIX read-limit
+  28 TRY_FIX read-limit
+  28 TRY_FIX    apply_edit       rejected
+  29 TRY_FIX read-limit
+  29 TRY_FIX read-limit
+  29 TRY_FIX read-limit
+  29 TRY_FIX read-limit
+  29 TRY_FIX    apply_edit       rejected
+  30 TRY_FIX read-limit
+  30 forced escalate (read limit)
+  -> ESCALATED (0 edits)
+
+=== Lang-5 ===
+  1 UNDERSTAND get_test_output  ok
+  2 UNDERSTAND read_file        ok
+  3 COLLECT    read_file        ok
+  4 TRY_FIX    read_file        ok
+  5 TRY_FIX    read_file        ok
+  6 TRY_FIX    read_file        ok
+  7 TRY_FIX read-limit
+  7 TRY_FIX    apply_edit       rejected
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX    escalate         ok
+  8 TRY_FIX escalate-too-early
+  9 TRY_FIX    apply_edit       rejected
+  10 TRY_FIX    read_file        ok
+  11 TRY_FIX    read_file        ok
+  12 TRY_FIX    read_file        ok
+  13 TRY_FIX read-limit
+  13 TRY_FIX    apply_edit       rejected
+  14 TRY_FIX read-limit
+  14 TRY_FIX read-limit
+  14 TRY_FIX read-limit
+  14 TRY_FIX read-limit
+  14 TRY_FIX read-limit
+  14 TRY_FIX    apply_edit       rejected
+  15 TRY_FIX read-limit
+  15 forced escalate (read limit)
+  -> ESCALATED (0 edits)
+
+=== Lang-6 ===
+  1 UNDERSTAND get_test_output  ok
+  2 UNDERSTAND read_file        ok
+  3 COLLECT    read_file        ok
+  4 TRY_FIX    read_file        ok
+  5 TRY_FIX    read_file        ok
+  6 TRY_FIX    read_file        ok
+  7 TRY_FIX read-limit
+  7 TRY_FIX read-limit
+  7 TRY_FIX read-limit
+  7 TRY_FIX    apply_edit       rejected
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 forced escalate (read limit)
+  -> ESCALATED (0 edits)
+
+=== Lang-7 ===
+  1 UNDERSTAND get_test_output  ok
+  2 UNDERSTAND read_file        ok
+  3 COLLECT    read_file        ok
+  4 TRY_FIX    read_file        ok
+  5 TRY_FIX    read_file        ok
+  6 TRY_FIX    read_file        ok
+  7 TRY_FIX read-limit
+  7 TRY_FIX    apply_edit       rejected
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX    apply_edit       rejected
+  9 TRY_FIX read-limit
+  9 TRY_FIX read-limit
+  9 forced escalate (read limit)
+  -> ESCALATED (0 edits)
+
+=== Lang-8 ===
+  1 UNDERSTAND get_test_output  ok
+  2 UNDERSTAND read_file        ok
+  3 COLLECT    search_repo      ok
+  4 TRY_FIX    read_file        ok
+  5 TRY_FIX    read_file        ok
+  6 TRY_FIX    read_file        ok
+  7 TRY_FIX read-limit
+  7 TRY_FIX read-limit
+  7 TRY_FIX read-limit
+  7 TRY_FIX read-limit
+  7 TRY_FIX read-limit
+  7 TRY_FIX    apply_edit       rejected
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 forced escalate (read limit)
+  -> ESCALATED (0 edits)
+
+=== Lang-9 ===
+  1 UNDERSTAND get_test_output  ok
+  2 UNDERSTAND read_file        ok
+  3 COLLECT    read_file        ok
+  4 TRY_FIX    read_file        ok
+  5 TRY_FIX    read_file        ok
+  6 TRY_FIX    read_file        ok
+  7 TRY_FIX read-limit
+  7 TRY_FIX    apply_edit       rejected
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX    escalate         ok
+  8 TRY_FIX escalate-too-early
+  9 TRY_FIX    apply_edit       rejected
+  10 TRY_FIX    read_file        ok
+  11 TRY_FIX    read_file        ok
+  12 TRY_FIX    read_file        ok
+  13 TRY_FIX read-limit
+  13 TRY_FIX read-limit
+  13 TRY_FIX read-limit
+  13 TRY_FIX    apply_edit       ok
+  14 TRY_FIX    run_tests        ok
+  15 REFLECT    read_file        ok
+  16 REFLECT    read_file        ok
+  17 REFLECT    read_file        ok
+  18 REFLECT read-limit
+  18 REFLECT    apply_edit       ok
+  19 TRY_FIX    run_tests        ok
+  20 REFLECT    read_file        ok
+  21 REFLECT    read_file        ok
+  22 REFLECT    read_file        ok
+  23 REFLECT read-limit
+  23 REFLECT    apply_edit       ok
+  24 TRY_FIX    run_tests        ok
+  25 REFLECT    read_file        ok
+  26 REFLECT    apply_edit       rejected
+  27 TRY_FIX    read_file        ok
+  28 TRY_FIX    apply_edit       rejected
+  29 TRY_FIX    apply_edit       rejected
+  30 TRY_FIX    apply_edit       rejected
+  -> TIMEOUT (3 edits)
+
+=== Lang-10 ===
+  1 UNDERSTAND get_test_output  ok
+  2 UNDERSTAND read_file        ok
+  3 COLLECT    read_file        ok
+  4 TRY_FIX    read_file        ok
+  5 TRY_FIX    read_file        ok
+  6 TRY_FIX    read_file        ok
+  7 TRY_FIX read-limit
+  7 TRY_FIX    apply_edit       rejected
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX    apply_edit       rejected
+  9 forced escalate (read limit)
+  -> ESCALATED (0 edits)
+
+=== Lang-11 ===
+  1 UNDERSTAND get_test_output  ok
+  2 UNDERSTAND read_file        ok
+  3 COLLECT    read_file        ok
+  4 TRY_FIX    read_file        ok
+  5 TRY_FIX    search_repo      ok
+  6 TRY_FIX    read_file        ok
+  7 TRY_FIX read-limit
+  7 TRY_FIX read-limit
+  7 TRY_FIX read-limit
+  7 TRY_FIX    apply_edit       rejected
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX    escalate         ok
+  8 TRY_FIX escalate-too-early
+  9 TRY_FIX    apply_edit       rejected
+  10 TRY_FIX    escalate         ok
+  10 TRY_FIX escalate-too-early
+  11 TRY_FIX    apply_edit       rejected
+  12 TRY_FIX    escalate         ok
+  12 TRY_FIX escalate-too-early
+  13 TRY_FIX    apply_edit       rejected
+  14 TRY_FIX    escalate         ok
+  14 TRY_FIX escalate-too-early
+  15 TRY_FIX    apply_edit       rejected
+  16 TRY_FIX    escalate         ok
+  16 TRY_FIX escalate-too-early
+  17 TRY_FIX    apply_edit       rejected
+  18 TRY_FIX    escalate         ok
+  18 TRY_FIX escalate-too-early
+  19 TRY_FIX    apply_edit       rejected
+  20 TRY_FIX    escalate         ok
+  20 TRY_FIX escalate-too-early
+  21 TRY_FIX    apply_edit       rejected
+  22 TRY_FIX    escalate         ok
+  22 TRY_FIX escalate-too-early
+  23 TRY_FIX    apply_edit       rejected
+  24 TRY_FIX    escalate         ok
+  24 TRY_FIX escalate-too-early
+  25 TRY_FIX    apply_edit       rejected
+  26 TRY_FIX    escalate         ok
+  26 TRY_FIX escalate-too-early
+  27 TRY_FIX    apply_edit       rejected
+  28 TRY_FIX    escalate         ok
+  28 TRY_FIX escalate-too-early
+  29 TRY_FIX    apply_edit       rejected
+  30 TRY_FIX    escalate         ok
+  30 TRY_FIX escalate-too-early
+  -> TIMEOUT (0 edits)
+
+=== Lang-12 ===
+  1 UNDERSTAND get_test_output  ok
+  2 UNDERSTAND read_file        ok
+  3 COLLECT    read_file        ok
+  4 TRY_FIX    read_file        ok
+  5 TRY_FIX    read_file        ok
+  6 TRY_FIX    read_file        ok
+  7 TRY_FIX read-limit
+  7 TRY_FIX    apply_edit       ok
+  8 TRY_FIX    run_tests        ok
+  9 REFLECT blocked get_test_output
+  10 REFLECT    read_file        ok
+  11 REFLECT    read_file        ok
+  12 REFLECT    read_file        ok
+  13 REFLECT read-limit
+  13 REFLECT    apply_edit       rejected
+  14 TRY_FIX read-limit
+  14 TRY_FIX    apply_edit       rejected
+  15 TRY_FIX read-limit
+  15 TRY_FIX read-limit
+  15 TRY_FIX read-limit
+  15 TRY_FIX read-limit
+  15 TRY_FIX    apply_edit       rejected
+  16 TRY_FIX read-limit
+  16 forced escalate (read limit)
+  -> ESCALATED (1 edits)
+
+=== Lang-13 ===
+  1 UNDERSTAND get_test_output  ok
+  2 UNDERSTAND read_file        ok
+  3 COLLECT    search_repo      ok
+  4 TRY_FIX    read_file        ok
+  5 TRY_FIX    read_file        ok
+  6 TRY_FIX    search_repo      ok
+  7 TRY_FIX read-limit
+  7 TRY_FIX read-limit
+  7 TRY_FIX read-limit
+  7 TRY_FIX read-limit
+  7 TRY_FIX    apply_edit       rejected
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 forced escalate (read limit)
+  -> ESCALATED (0 edits)
+
+=== Lang-14 ===
+  1 UNDERSTAND get_test_output  ok
+  2 UNDERSTAND read_file        ok
+  3 COLLECT    read_file        ok
+  4 TRY_FIX    read_file        ok
+  5 TRY_FIX    read_file        ok
+  6 TRY_FIX    read_file        ok
+  7 TRY_FIX read-limit
+  7 TRY_FIX    apply_edit       rejected
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX    escalate         ok
+  8 TRY_FIX escalate-too-early
+  9 TRY_FIX    apply_edit       ok
+  10 TRY_FIX    run_tests        ok
+  11 REFLECT    read_file        ok
+  12 REFLECT    apply_edit       ok
+  13 TRY_FIX    run_tests        ok
+  14 REFLECT    read_file        ok
+  15 REFLECT    read_file        ok
+  16 REFLECT    read_file        ok
+  17 REFLECT read-limit
+  17 REFLECT read-limit
+  17 REFLECT    apply_edit       ok
+  18 TRY_FIX    run_tests        ok
+  19 REFLECT    read_file        ok
+  20 REFLECT    read_file        ok
+  21 REFLECT    read_file        ok
+  22 REFLECT read-limit
+  22 REFLECT    apply_edit       ok
+  23 TRY_FIX    run_tests        ok
+  24 REFLECT blocked get_test_output
+  25 REFLECT    read_file        ok
+  26 REFLECT    read_file        ok
+  27 REFLECT    read_file        ok
+  28 REFLECT read-limit
+  28 REFLECT    apply_edit       rejected
+  29 TRY_FIX read-limit
+  29 TRY_FIX read-limit
+  29 TRY_FIX read-limit
+  29 TRY_FIX read-limit
+  29 TRY_FIX    apply_edit       ok
+  30 TRY_FIX    apply_edit       ok
+  -> TIMEOUT (6 edits)
+
+=== Lang-15 ===
+  1 UNDERSTAND get_test_output  ok
+  2 UNDERSTAND read_file        ok
+  3 COLLECT    read_file        ok
+  4 TRY_FIX    read_file        ok
+  5 TRY_FIX    read_file        ok
+  6 TRY_FIX    read_file        ok
+  7 TRY_FIX read-limit
+  7 TRY_FIX read-limit
+  7 TRY_FIX    apply_edit       ok
+  8 TRY_FIX    run_tests        ok
+  9 REFLECT blocked get_test_output
+  10 REFLECT    read_file        ok
+  11 REFLECT    read_file        ok
+  12 REFLECT    read_file        ok
+  13 REFLECT read-limit
+  13 REFLECT    apply_edit       ok
+  14 TRY_FIX    run_tests        ok
+  15 REFLECT    read_file        ok
+  16 REFLECT    apply_edit       ok
+  17 TRY_FIX    run_tests        ok
+  18 REFLECT    read_file        ok
+  19 REFLECT    run_tests        ok
+  20 REFLECT    read_file        ok
+  21 REFLECT    read_file        ok
+  22 REFLECT    read_file        ok
+  23 REFLECT read-limit
+  23 REFLECT    apply_edit       rejected
+  24 TRY_FIX    apply_edit       rejected
+  25 TRY_FIX    apply_edit       rejected
+  26 TRY_FIX    apply_edit       rejected
+  27 TRY_FIX    apply_edit       rejected
+  28 TRY_FIX read-limit
+  28 TRY_FIX    apply_edit       rejected
+  29 TRY_FIX read-limit
+  29 TRY_FIX read-limit
+  29 TRY_FIX    apply_edit       rejected
+  30 TRY_FIX    apply_edit       rejected
+  -> TIMEOUT (3 edits)
+
+=== Lang-16 ===
+  1 UNDERSTAND get_test_output  ok
+  2 UNDERSTAND read_file        ok
+  3 COLLECT    read_file        ok
+  4 TRY_FIX    read_file        ok
+  5 TRY_FIX    read_file        ok
+  6 TRY_FIX    read_file        ok
+  7 TRY_FIX read-limit
+  7 TRY_FIX read-limit
+  7 TRY_FIX read-limit
+  7 TRY_FIX read-limit
+  7 TRY_FIX read-limit
+  7 TRY_FIX    apply_edit       rejected
+  8 TRY_FIX read-limit
+  8 TRY_FIX    apply_edit       rejected
+  9 TRY_FIX read-limit
+  9 forced escalate (read limit)
+  -> ESCALATED (0 edits)
+
+=== Lang-17 ===
+  1 UNDERSTAND get_test_output  ok
+  2 UNDERSTAND read_file        ok
+  3 COLLECT    read_file        ok
+  4 TRY_FIX    read_file        ok
+  5 TRY_FIX    read_file        ok
+  6 TRY_FIX    read_file        ok
+  7 TRY_FIX read-limit
+  7 TRY_FIX    apply_edit       rejected
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX    apply_edit       rejected
+  9 TRY_FIX    escalate         ok
+  9 TRY_FIX escalate-too-early
+  10 TRY_FIX    apply_edit       rejected
+  11 TRY_FIX    search_repo      ok
+  12 TRY_FIX    search_repo      ok
+  13 TRY_FIX    search_repo      ok
+  14 TRY_FIX read-limit
+  14 TRY_FIX read-limit
+  14 TRY_FIX    escalate         ok
+  14 TRY_FIX escalate-too-early
+  15 TRY_FIX    apply_edit       rejected
+  16 TRY_FIX    read_file        ok
+  17 TRY_FIX    read_file        ok
+  18 TRY_FIX    read_file        ok
+  19 TRY_FIX read-limit
+  19 TRY_FIX read-limit
+  19 TRY_FIX    apply_edit       rejected
+  20 TRY_FIX read-limit
+  20 TRY_FIX read-limit
+  20 TRY_FIX read-limit
+  20 TRY_FIX    apply_edit       rejected
+  21 TRY_FIX read-limit
+  21 TRY_FIX    escalate         ok
+  21 TRY_FIX escalate-too-early
+  22 TRY_FIX    read_file        ok
+  23 TRY_FIX    read_file        ok
+  24 TRY_FIX    read_file        ok
+  25 TRY_FIX read-limit
+  25 TRY_FIX    apply_edit       ok
+  26 TRY_FIX    run_tests        ok
+  27 REFLECT    read_file        ok
+  28 REFLECT    read_file        ok
+  29 REFLECT    read_file        ok
+  30 REFLECT read-limit
+  30 REFLECT    apply_edit       ok
+  -> TIMEOUT (2 edits)
+
+=== Lang-19 ===
+  1 UNDERSTAND get_test_output  ok
+  2 UNDERSTAND read_file        ok
+  3 COLLECT    read_file        ok
+  4 TRY_FIX    read_file        ok
+  5 TRY_FIX    read_file        ok
+  6 TRY_FIX    read_file        ok
+  7 TRY_FIX read-limit
+  7 TRY_FIX    apply_edit       rejected
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX    escalate         ok
+  8 TRY_FIX escalate-too-early
+  9 TRY_FIX    search_repo      ok
+  10 TRY_FIX    search_repo      ok
+  11 TRY_FIX    search_repo      ok
+  12 TRY_FIX read-limit
+  12 TRY_FIX    escalate         ok
+  12 TRY_FIX escalate-too-early
+  13 TRY_FIX    search_repo      ok
+  14 TRY_FIX    search_repo      ok
+  15 TRY_FIX    read_file        ok
+  16 TRY_FIX read-limit
+  16 TRY_FIX read-limit
+  16 TRY_FIX    apply_edit       rejected
+  17 TRY_FIX read-limit
+  17 TRY_FIX read-limit
+  17 TRY_FIX read-limit
+  17 TRY_FIX read-limit
+  17 TRY_FIX read-limit
+  17 TRY_FIX    escalate         ok
+  17 TRY_FIX escalate-too-early
+  18 TRY_FIX    apply_edit       rejected
+  19 TRY_FIX    read_file        ok
+  20 TRY_FIX    read_file        ok
+  21 TRY_FIX    read_file        ok
+  22 TRY_FIX read-limit
+  22 TRY_FIX    apply_edit       ok
+  23 TRY_FIX    run_tests        ok
+  24 REFLECT    read_file        ok
+  25 REFLECT    apply_edit       ok
+  26 TRY_FIX    run_tests        ok
+  27 REFLECT    read_file        ok
+  28 REFLECT    apply_edit       ok
+  29 TRY_FIX    run_tests        ok
+  30 REFLECT    read_file        ok
+  -> TIMEOUT (3 edits)
+
+=== Lang-20 ===
+  1 UNDERSTAND get_test_output  ok
+  2 UNDERSTAND read_file        ok
+  3 COLLECT    read_file        ok
+  4 TRY_FIX    read_file        ok
+  5 TRY_FIX    read_file        ok
+  6 TRY_FIX    read_file        ok
+  7 TRY_FIX read-limit
+  7 TRY_FIX read-limit
+  7 TRY_FIX    apply_edit       rejected
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX    apply_edit       rejected
+  9 forced escalate (read limit)
+  -> ESCALATED (0 edits)
+
+=== Lang-21 ===
+  1 UNDERSTAND get_test_output  ok
+  2 UNDERSTAND read_file        ok
+  3 COLLECT    read_file        ok
+  4 TRY_FIX    read_file        ok
+  5 TRY_FIX    read_file        ok
+  6 TRY_FIX    read_file        ok
+  7 TRY_FIX read-limit
+  7 TRY_FIX    apply_edit       rejected
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX    escalate         ok
+  8 TRY_FIX escalate-too-early
+  9 TRY_FIX    apply_edit       rejected
+  10 TRY_FIX    read_file        ok
+  11 TRY_FIX    search_repo      ok
+  12 TRY_FIX    read_file        ok
+  13 TRY_FIX read-limit
+  13 TRY_FIX read-limit
+  13 TRY_FIX    escalate         ok
+  13 TRY_FIX escalate-too-early
+  14 TRY_FIX    read_file        ok
+  15 TRY_FIX    search_repo      ok
+  16 TRY_FIX    read_file        ok
+  17 TRY_FIX read-limit
+  17 TRY_FIX    apply_edit       ok
+  18 TRY_FIX    run_tests        ok
+  19 REFLECT    read_file        ok
+  20 REFLECT    read_file        ok
+  21 REFLECT    search_repo      ok
+  22 REFLECT read-limit
+  22 REFLECT    apply_edit       rejected
+  23 TRY_FIX read-limit
+  23 TRY_FIX read-limit
+  23 TRY_FIX read-limit
+  23 TRY_FIX read-limit
+  23 TRY_FIX parse_error
+  24 TRY_FIX    apply_edit       rejected
+  25 TRY_FIX read-limit
+  25 TRY_FIX    apply_edit       rejected
+  26 TRY_FIX read-limit
+  26 forced escalate (read limit)
+  -> ESCALATED (1 edits)
+
+=== Lang-22 ===
+  1 UNDERSTAND get_test_output  ok
+  2 UNDERSTAND read_file        ok
+  3 COLLECT    read_file        ok
+  4 TRY_FIX    read_file        ok
+  5 TRY_FIX    read_file        ok
+  6 TRY_FIX    read_file        ok
+  7 TRY_FIX read-limit
+  7 TRY_FIX read-limit
+  7 TRY_FIX read-limit
+  7 TRY_FIX    apply_edit       rejected
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 forced escalate (read limit)
+  -> ESCALATED (0 edits)
+
+=== Lang-23 ===
+  1 UNDERSTAND get_test_output  ok
+  2 UNDERSTAND read_file        ok
+  3 COLLECT    read_file        ok
+  4 TRY_FIX    read_file        ok
+  5 TRY_FIX    read_file        ok
+  6 TRY_FIX    read_file        ok
+  7 TRY_FIX read-limit
+  7 TRY_FIX read-limit
+  7 TRY_FIX    apply_edit       rejected
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX    escalate         ok
+  8 TRY_FIX escalate-too-early
+  9 TRY_FIX    read_file        ok
+  10 TRY_FIX    read_file        ok
+  11 TRY_FIX    read_file        ok
+  12 TRY_FIX read-limit
+  12 TRY_FIX    apply_edit       ok
+  13 TRY_FIX    run_tests        ok
+  14 REFLECT    apply_edit       ok
+  15 TRY_FIX    read_file        ok
+  16 TRY_FIX blocked get_test_output
+  17 TRY_FIX    apply_edit       ok
+  18 TRY_FIX    run_tests        ok
+  19 REFLECT    read_file        ok
+  20 REFLECT    apply_edit       ok
+  21 TRY_FIX    run_tests        ok
+  22 REFLECT    read_file        ok
+  23 REFLECT    apply_edit       ok
+  24 TRY_FIX    run_tests        ok
+  -> ESCALATED (5 edits)
+
+=== Lang-24 ===
+  1 UNDERSTAND get_test_output  ok
+  2 UNDERSTAND read_file        ok
+  3 COLLECT    read_file        ok
+  4 TRY_FIX    read_file        ok
+  5 TRY_FIX    read_file        ok
+  6 TRY_FIX    read_file        ok
+  7 TRY_FIX read-limit
+  7 TRY_FIX read-limit
+  7 TRY_FIX    escalate         ok
+  7 TRY_FIX escalate-too-early
+  8 TRY_FIX    search_repo      ok
+  9 TRY_FIX    read_file        ok
+  10 TRY_FIX    read_file        ok
+  11 TRY_FIX read-limit
+  11 TRY_FIX read-limit
+  11 TRY_FIX    apply_edit       ok
+  12 TRY_FIX    run_tests        ok
+  13 REFLECT    read_file        ok
+  14 REFLECT    read_file        ok
+  15 REFLECT    read_file        ok
+  16 REFLECT read-limit
+  16 REFLECT read-limit
+  16 REFLECT read-limit
+  16 REFLECT    apply_edit       rejected
+  17 TRY_FIX read-limit
+  17 TRY_FIX read-limit
+  17 TRY_FIX read-limit
+  17 TRY_FIX read-limit
+  17 forced escalate (read limit)
+  -> ESCALATED (1 edits)
+
+=== Lang-26 ===
+  1 UNDERSTAND get_test_output  ok
+  2 UNDERSTAND read_file        ok
+  3 COLLECT    read_file        ok
+  4 TRY_FIX    read_file        ok
+  5 TRY_FIX    read_file        ok
+  6 TRY_FIX    read_file        ok
+  7 TRY_FIX read-limit
+  7 TRY_FIX    apply_edit       rejected
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX    apply_edit       rejected
+  9 TRY_FIX    apply_edit       rejected
+  10 TRY_FIX    apply_edit       rejected
+  11 TRY_FIX read-limit
+  11 TRY_FIX    apply_edit       rejected
+  12 TRY_FIX read-limit
+  12 TRY_FIX    apply_edit       rejected
+  13 TRY_FIX    apply_edit       rejected
+  14 TRY_FIX    apply_edit       rejected
+  15 TRY_FIX read-limit
+  15 TRY_FIX    apply_edit       rejected
+  16 forced escalate (read limit)
+  -> ESCALATED (0 edits)
+
+=== Lang-27 ===
+  1 UNDERSTAND get_test_output  ok
+  2 UNDERSTAND read_file        ok
+  3 COLLECT    read_file        ok
+  4 TRY_FIX    read_file        ok
+  5 TRY_FIX    read_file        ok
+  6 TRY_FIX    read_file        ok
+  7 TRY_FIX read-limit
+  7 TRY_FIX read-limit
+  7 TRY_FIX    apply_edit       rejected
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX    apply_edit       rejected
+  9 forced escalate (read limit)
+  -> ESCALATED (0 edits)
+
+=== Lang-28 ===
+  1 UNDERSTAND get_test_output  ok
+  2 UNDERSTAND read_file        ok
+  3 COLLECT    read_file        ok
+  4 TRY_FIX    read_file        ok
+  5 TRY_FIX    read_file        ok
+  6 TRY_FIX    read_file        ok
+  7 TRY_FIX read-limit
+  7 TRY_FIX    apply_edit       rejected
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX    escalate         ok
+  8 TRY_FIX escalate-too-early
+  9 TRY_FIX    apply_edit       rejected
+  10 TRY_FIX    read_file        ok
+  11 TRY_FIX    read_file        ok
+  12 TRY_FIX    read_file        ok
+  13 TRY_FIX read-limit
+  13 TRY_FIX    apply_edit       rejected
+  14 TRY_FIX read-limit
+  14 TRY_FIX read-limit
+  14 TRY_FIX read-limit
+  14 TRY_FIX read-limit
+  14 TRY_FIX    apply_edit       rejected
+  15 TRY_FIX    escalate         ok
+  15 TRY_FIX escalate-too-early
+  16 TRY_FIX    apply_edit       rejected
+  17 TRY_FIX    read_file        ok
+  18 TRY_FIX    read_file        ok
+  19 TRY_FIX    read_file        ok
+  20 TRY_FIX read-limit
+  20 TRY_FIX read-limit
+  20 TRY_FIX    apply_edit       rejected
+  21 TRY_FIX read-limit
+  21 TRY_FIX read-limit
+  21 TRY_FIX read-limit
+  21 TRY_FIX    apply_edit       rejected
+  22 TRY_FIX read-limit
+  22 TRY_FIX    escalate         ok
+  22 TRY_FIX escalate-too-early
+  23 TRY_FIX    apply_edit       rejected
+  24 TRY_FIX    read_file        ok
+  25 TRY_FIX    read_file        ok
+  26 TRY_FIX    read_file        ok
+  27 TRY_FIX read-limit
+  27 TRY_FIX    apply_edit       rejected
+  28 TRY_FIX read-limit
+  28 TRY_FIX read-limit
+  28 TRY_FIX read-limit
+  28 TRY_FIX    escalate         ok
+  28 TRY_FIX escalate-too-early
+  29 TRY_FIX    apply_edit       rejected
+  30 TRY_FIX    read_file        ok
+  -> TIMEOUT (0 edits)
+
+=== Lang-29 ===
+  1 UNDERSTAND get_test_output  ok
+  2 UNDERSTAND read_file        ok
+  3 COLLECT    search_repo      ok
+  4 TRY_FIX    read_file        ok
+  5 TRY_FIX    read_file        ok
+  6 TRY_FIX    search_repo      ok
+  7 TRY_FIX read-limit
+  7 TRY_FIX read-limit
+  7 TRY_FIX parse_error
+  8 TRY_FIX read-limit
+  8 TRY_FIX    apply_edit       ok
+  9 TRY_FIX    run_tests        ok
+  10 REFLECT    read_file        ok
+  11 REFLECT    search_repo      ok
+  12 REFLECT    search_repo      ok
+  13 REFLECT read-limit
+  13 REFLECT read-limit
+  13 REFLECT    apply_edit       ok
+  14 TRY_FIX    run_tests        ok
+  15 REFLECT    read_file        ok
+  16 REFLECT    read_file        ok
+  17 REFLECT    read_file        ok
+  18 REFLECT read-limit
+  18 REFLECT    apply_edit       ok
+  19 TRY_FIX    run_tests        ok
+  20 REFLECT    read_file        ok
+  21 REFLECT    apply_edit       ok
+  22 TRY_FIX    run_tests        ok
+  23 REFLECT    read_file        ok
+  24 REFLECT    run_tests        ok
+  25 REFLECT blocked get_test_output
+  26 REFLECT    read_file        ok
+  27 REFLECT    read_file        ok
+  28 REFLECT    read_file        ok
+  29 REFLECT read-limit
+  29 REFLECT    apply_edit       ok
+  30 TRY_FIX    run_tests        ok
+  -> ESCALATED (5 edits)
+
+=== Lang-30 ===
+  1 UNDERSTAND get_test_output  ok
+  2 UNDERSTAND read_file        ok
+  3 COLLECT    read_file        ok
+  4 TRY_FIX    read_file        ok
+  5 TRY_FIX    read_file        ok
+  6 TRY_FIX    apply_edit       rejected
+  7 TRY_FIX    read_file        ok
+  8 TRY_FIX    apply_edit       rejected
+  9 TRY_FIX read-limit
+  9 TRY_FIX    apply_edit       ok
+  10 TRY_FIX    run_tests        ok
+  11 REFLECT blocked get_test_output
+  12 REFLECT    read_file        ok
+  13 REFLECT    apply_edit       ok
+  14 TRY_FIX    run_tests        ok
+  15 REFLECT    read_file        ok
+  16 REFLECT blocked get_test_output
+  17 REFLECT    read_file        ok
+  18 REFLECT blocked get_test_output
+  19 REFLECT blocked get_test_output
+  20 REFLECT    run_tests        ok
+  21 REFLECT    read_file        ok
+  22 REFLECT    read_file        ok
+  23 REFLECT    read_file        ok
+  24 REFLECT read-limit
+  24 REFLECT    apply_edit       rejected
+  25 TRY_FIX read-limit
+  25 TRY_FIX    apply_edit       rejected
+  26 TRY_FIX    apply_edit       ok
+  27 TRY_FIX    run_tests        ok
+  28 REFLECT    read_file        ok
+  29 REFLECT    search_repo      ok
+  30 REFLECT    run_tests        ok
+  -> TIMEOUT (3 edits)
+
+=== Lang-31 ===
+  1 UNDERSTAND get_test_output  ok
+  2 UNDERSTAND read_file        ok
+  3 COLLECT    read_file        ok
+  4 TRY_FIX    read_file        ok
+  5 TRY_FIX    read_file        ok
+  6 TRY_FIX    read_file        ok
+  7 TRY_FIX read-limit
+  7 TRY_FIX read-limit
+  7 TRY_FIX    apply_edit       rejected
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX    apply_edit       rejected
+  9 TRY_FIX read-limit
+  9 TRY_FIX    escalate         ok
+  9 TRY_FIX escalate-too-early
+  10 TRY_FIX    read_file        ok
+  11 TRY_FIX    search_repo      ok
+  12 TRY_FIX    search_repo      ok
+  13 TRY_FIX read-limit
+  13 TRY_FIX    escalate         ok
+  13 TRY_FIX escalate-too-early
+  14 TRY_FIX    search_repo      ok
+  15 TRY_FIX    search_repo      ok
+  16 TRY_FIX    search_repo      ok
+  17 TRY_FIX read-limit
+  17 TRY_FIX    escalate         ok
+  17 TRY_FIX escalate-too-early
+  18 TRY_FIX    search_repo      ok
+  19 TRY_FIX    search_repo      ok
+  20 TRY_FIX    search_repo      ok
+  21 TRY_FIX read-limit
+  21 TRY_FIX    escalate         ok
+  21 TRY_FIX escalate-too-early
+  22 TRY_FIX    search_repo      ok
+  23 TRY_FIX    search_repo      ok
+  24 TRY_FIX    search_repo      ok
+  25 TRY_FIX read-limit
+  25 TRY_FIX    escalate         ok
+  25 TRY_FIX escalate-too-early
+  26 TRY_FIX    search_repo      ok
+  27 TRY_FIX    search_repo      ok
+  28 TRY_FIX    search_repo      ok
+  29 TRY_FIX read-limit
+  29 TRY_FIX    escalate         ok
+  29 TRY_FIX escalate-too-early
+  30 TRY_FIX    search_repo      ok
+  -> TIMEOUT (0 edits)
+
+=== Lang-32 ===
+  1 UNDERSTAND get_test_output  ok
+  2 UNDERSTAND read_file        ok
+  3 COLLECT    read_file        ok
+  4 TRY_FIX    read_file        ok
+  5 TRY_FIX    read_file        ok
+  6 TRY_FIX    read_file        ok
+  7 TRY_FIX read-limit
+  7 TRY_FIX    apply_edit       rejected
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX    escalate         ok
+  8 TRY_FIX escalate-too-early
+  9 TRY_FIX    read_file        ok
+  10 TRY_FIX    read_file        ok
+  11 TRY_FIX    read_file        ok
+  12 TRY_FIX read-limit
+  12 TRY_FIX read-limit
+  12 TRY_FIX read-limit
+  12 TRY_FIX    apply_edit       rejected
+  13 TRY_FIX read-limit
+  13 TRY_FIX read-limit
+  13 TRY_FIX read-limit
+  13 TRY_FIX read-limit
+  13 forced escalate (read limit)
+  -> ESCALATED (0 edits)
+
+=== Lang-33 ===
+  1 UNDERSTAND get_test_output  ok
+  2 UNDERSTAND read_file        ok
+  3 COLLECT    read_file        ok
+  4 TRY_FIX    read_file        ok
+  5 TRY_FIX    read_file        ok
+  6 TRY_FIX    read_file        ok
+  7 TRY_FIX read-limit
+  7 TRY_FIX    apply_edit       rejected
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX read-limit
+  8 TRY_FIX    escalate         ok
+  8 TRY_FIX escalate-too-early
+  9 TRY_FIX    search_repo      ok
+  10 TRY_FIX    apply_edit       ok
+  11 TRY_FIX    run_tests        ok
+  12 REFLECT    read_file        ok
+  13 REFLECT    read_file        ok
+  14 REFLECT    read_file        ok
+  15 REFLECT read-limit
+  15 REFLECT    apply_edit       rejected
+  16 TRY_FIX read-limit
+  16 TRY_FIX read-limit
+  16 TRY_FIX read-limit
+  16 TRY_FIX read-limit
+  16 TRY_FIX    apply_edit       rejected
+  17 TRY_FIX    escalate         ok
+  17 TRY_FIX escalate-too-early
+  18 TRY_FIX    apply_edit       rejected
+  19 TRY_FIX    apply_edit       rejected
+  20 TRY_FIX    read_file        ok
+  21 TRY_FIX    read_file        ok
+  22 TRY_FIX    read_file        ok
+  23 TRY_FIX read-limit
+  23 TRY_FIX    apply_edit       rejected
+  24 TRY_FIX read-limit
+  24 TRY_FIX read-limit
+  24 TRY_FIX read-limit
+  24 TRY_FIX read-limit
+  24 TRY_FIX    apply_edit       rejected
+  25 TRY_FIX    apply_edit       rejected
+  26 TRY_FIX read-limit
+  26 TRY_FIX    apply_edit       rejected
+  27 TRY_FIX read-limit
+  27 forced escalate (read limit)
+  -> ESCALATED (1 edits)
+
+========================================
+ESCALATED    20
+TIMEOUT      10
+
+plausible: 0/30 = 0.0%
+results -> /home/23ucs603/btp/repairlam/results/phase2_fsm_Lang_qwen32b.json

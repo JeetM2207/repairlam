@@ -73,19 +73,20 @@ def parse_action(text):
         m = re.search(r"```(?:json)?\s*(.*?)```", t, re.S)
         if m:
             t = m.group(1).strip()
-    i, j = t.find("{"), t.rfind("}")
-    if i == -1 or j == -1:
-        return None, None, "no JSON object found"
-    raw = t[i:j + 1]
-
-    for candidate in (raw, _repair_json(raw)):
+    decoder = json.JSONDecoder()
+    obj, last_err = None, "no JSON object found"
+    for candidate in (t, _repair_json(t)):
+        i = candidate.find("{")
+        if i == -1:
+            continue
         try:
-            obj = json.loads(candidate)
+            obj, _ = decoder.raw_decode(candidate, i)
             break
         except json.JSONDecodeError as e:
             last_err = e
-    else:
-        return None, None, f"invalid JSON: {last_err}"
+    if obj is None:
+        return None, None, (f"invalid JSON: {last_err}"
+                             if isinstance(last_err, json.JSONDecodeError) else last_err)
 
     act = obj.get("action") or {}
     tool = act.get("tool")
@@ -207,12 +208,6 @@ def run_bug(project, bug, ctx, results):
                     print(f"  {turn} {state} read-limit", flush=True)
                     turn -= 1
                     continue
-            if tool in ("apply_edit", "run_tests"):
-                reads_since_edit = 0
-            if tool == "apply_edit" and res.status == "ok":
-                history.append("[system] Edit applied. You MUST call run_tests "
-                               "as your very next action before doing anything else.")
-
             if tool not in ALLOWED[state]:
                 msg = (f"'{tool}' is not allowed in {state}. "
                        f"Allowed: {', '.join(sorted(ALLOWED[state]))}")
@@ -226,6 +221,9 @@ def run_bug(project, bug, ctx, results):
             res = disp.call(tool, args)
             if tool == "apply_edit" and res.status == "ok":
                 attempts += 1
+                reads_since_edit = 0
+            elif tool == "run_tests":
+                reads_since_edit = 0
 
             log.event(bug_id, state, thought=thought, tool=tool,
                       args={k: str(v)[:200] for k, v in args.items()},
@@ -236,6 +234,9 @@ def run_bug(project, bug, ctx, results):
 
             history.append(f"[you] {thought}\n[action] {tool} {json.dumps(args)[:300]}\n"
                            f"[result:{res.status}] {res.output[:1200]}")
+            if tool == "apply_edit" and res.status == "ok":
+                history.append("[system] Edit applied. You MUST call run_tests "
+                               "as your very next action before doing anything else.")
 
             if tool == "finish":
                 t = d4j.run_tests(wd)

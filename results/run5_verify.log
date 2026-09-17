@@ -1,0 +1,41 @@
+server context: 14000
+FSM agent on 5 Lang bugs with qwen32b
+
+=== Lang-1 ===
+  1 UNDERSTAND get_test_output  ok
+  2 UNDERSTAND read_file        ok
+  3 COLLECT    read_file        ok
+  4 TRY_FIX    read_file        ok
+  5 TRY_FIX    read_file        ok
+  6 TRY_FIX    read_file        ok
+  7 TRY_FIX read-limit
+  7 TRY_FIX read-limit
+  7 TRY_FIX read-limit
+  7 TRY_FIX    apply_edit       rejected
+  8 TRY_FIX    read_file        ok
+  9 TRY_FIX    read_file        ok
+  10 TRY_FIX    read_file        ok
+  11 TRY_FIX read-limit
+  11 TRY_FIX    apply_edit       rejected
+  12 TRY_FIX    read_file        ok
+  13 TRY_FIX    read_file        ok
+  14 TRY_FIX    read_file        ok
+  15 TRY_FIX read-limit
+  15 TRY_FIX read-limit
+  15 TRY_FIX    apply_edit       rejected
+  16 TRY_FIX    read_file        ok
+  17 TRY_FIX    search_repo      ok
+  18 TRY_FIX    search_repo      ok
+  19 TRY_FIX read-limit
+  19 TRY_FIX    escalate         ok
+  19 TRY_FIX escalate-too-early
+  20 TRY_FIX    read_file        ok
+  21 TRY_FIX    read_file        ok
+  22 TRY_FIX    read_file        ok
+  23 TRY_FIX read-limit
+  23 TRY_FIX    apply_edit       ok
+  24 TRY_FIX    run_tests        ok
+  25 REFLECT    read_file        ok
+  26 REFLECT blocked get_test_output
+  27 REFLECT    run_tests        ok
+  28 REFLECT    read_file        ok
