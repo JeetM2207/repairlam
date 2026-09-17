@@ -122,11 +122,11 @@ def run_bug(project, bug, ctx, results):
 
             hint = (f"The defect is in: {hint_file}\n\n" if hint_file else "")
             allowed = set(ALLOWED[state])
-            if reads_since_edit > 5 and state in ("TRY_FIX", "REFLECT"):
+            if reads_since_edit > 3 and state in ("TRY_FIX", "REFLECT"):
                 allowed -= {"read_file", "search_repo", "get_test_output"}
             urgent = ("\nYOU HAVE READ ENOUGH. You must call apply_edit now "
                       "with your best hypothesis, or escalate.\n"
-                      if reads_since_edit > 5 else "")
+                      if reads_since_edit > 3 else "")
             user = (hint + f"{state_prompt(state)}{urgent}\n\n"
                     f"Allowed tools this phase: {', '.join(sorted(allowed))}\n\n"
                     f"--- history ---\n{convo}\n--- end history ---\n\n"
@@ -161,7 +161,7 @@ def run_bug(project, bug, ctx, results):
                     escalation = "read limit exceeded without any edit attempt"
                     print(f"  {turn} forced escalate (read limit)", flush=True)
                     break
-                if reads_since_edit > 5:
+                if reads_since_edit > 3:
                     msg = ("BLOCKED: you already read enough. Your next action "
                            "MUST be apply_edit or escalate. Reading is disabled.")
                     history.append(f"[you] tried {tool}\n[system] {msg}")

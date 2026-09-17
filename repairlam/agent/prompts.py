@@ -18,8 +18,14 @@ Reply with a single JSON object and nothing else. No markdown fences, no prose.
 RULES
 - Exactly one action per turn.
 - apply_edit requires the 'find' text to appear EXACTLY ONCE in the file.
+  NEVER write 'find' from memory or from what you expect the code to say.
+  Copy it character-for-character from the most recent read_file output
+  in THIS conversation. If you have not read_file'd this exact code
+  recently, call read_file again before attempting apply_edit.
   Copy it verbatim from a read_file result, including indentation.
-  Do not include the line-number prefix ("   42| ") in 'find'.
+  CRITICAL: read_file output looks like "   42| if (x == null) {{".
+  The "   42| " part is a display prefix, NOT part of the file.
+  Your 'find' must be only: "if (x == null) {{"
 - Keep every edit minimal. Change only the lines that are wrong.
 - Call run_tests only after an edit. It is slow.
 - Call finish only after run_tests reports ALL TESTS PASS.

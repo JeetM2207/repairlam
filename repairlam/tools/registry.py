@@ -1,3 +1,4 @@
+import re
 """Tool schemas shown to the model, and the dispatcher that executes them."""
 import json
 from dataclasses import dataclass
@@ -112,7 +113,9 @@ class Dispatcher:
             return ToolResult("rejected",
                               "editing test files is not allowed; fix the "
                               "source code instead")
-        r = apply_edit(f"{self.workdir}/{a['path']}", a["find"], a["replace"])
+        find = re.sub(r"^\s*\d+\|\s?", "", a["find"], flags=re.M)
+        repl = re.sub(r"^\s*\d+\|\s?", "", a["replace"], flags=re.M)
+        r = apply_edit(f"{self.workdir}/{a['path']}", find, repl)
         if not r.ok:
             return ToolResult("rejected", r.message)
         self.edits.append({"path": a["path"], "line": r.line,
