@@ -1,5 +1,5 @@
-"""Thin wrappers around the defects4j CLI."""
-import subprocess, shutil, os
+"""Thin wrappers around the defects4j CLI, with safe process-group timeouts."""
+import subprocess, shutil, os, signal
 from pathlib import Path
 from dataclasses import dataclass
 
@@ -10,12 +10,24 @@ os.environ["PATH"] = f"{JAVA_HOME}/bin:" + os.environ.get("PATH", "")
 
 
 def _run(cmd, cwd=None, timeout=600):
+    """Kill the WHOLE process group on timeout, so no orphaned java/ant
+    child survives. Orphans are what silently slowed every later run."""
+    p = subprocess.Popen(cmd, cwd=cwd, stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE, text=True,
+                         start_new_session=True)
     try:
-        p = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True,
-                           timeout=timeout, shell=isinstance(cmd, str))
-        return p.returncode, p.stdout, p.stderr
+        out, err = p.communicate(timeout=timeout)
+        return p.returncode, out, err
     except subprocess.TimeoutExpired:
-        return -1, "", f"TIMEOUT after {timeout}s"
+        try:
+            os.killpg(os.getpgid(p.pid), signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        try:
+            out, err = p.communicate(timeout=5)
+        except Exception:
+            out, err = "", ""
+        return -1, out, f"TIMEOUT after {timeout}s\n{err}"
 
 
 @dataclass
@@ -40,13 +52,19 @@ def checkout(project, bug, workdir) -> bool:
     return rc == 0
 
 
-def compile_project(workdir) -> tuple:
-    rc, out, err = _run([D4J, "compile"], cwd=workdir, timeout=600)
+def compile_project(workdir, timeout=300) -> tuple:
+    rc, out, err = _run([D4J, "compile"], cwd=workdir, timeout=timeout)
     return rc == 0, (out + err)[-4000:]
 
 
-def run_tests(workdir, timeout=900) -> TestResult:
-    rc, out, err = _run([D4J, "test"], cwd=workdir, timeout=timeout)
+def run_tests(workdir, timeout=600, test_class=None) -> TestResult:
+    """test_class (e.g. 'org.foo.BarTest') runs only that class via
+    'defects4j test -t' -- much faster for in-loop feedback. Always
+    confirm with an unfiltered call before accepting a fix as plausible."""
+    cmd = [D4J, "test"]
+    if test_class:
+        cmd += ["-t", test_class]
+    rc, out, err = _run(cmd, cwd=workdir, timeout=timeout)
     raw = out + err
     failing = []
     for line in raw.splitlines():

@@ -1,84 +1,23 @@
 {
   "context": 14000,
   "counts": {
-    "TIMEOUT": 4,
-    "ESCALATED": 1
+    "TIMEOUT": 1
   },
   "runs": [
     {
       "type": "run_summary",
-      "bug_id": "Lang-1",
-      "outcome": "TIMEOUT",
-      "turns_used": 34,
-      "model": "qwen32b",
-      "total_tokens_in": 73930,
-      "total_tokens_out": 3258,
-      "wall_clock_s": 406.1,
-      "edits_applied": 1,
-      "fix_attempts": 1,
-      "escalation": null,
-      "ts": "2026-09-17T09:50:37.049284+00:00",
-      "run_id": "Lang-1_qwen32b_fsm_20260917T151350"
-    },
-    {
-      "type": "run_summary",
-      "bug_id": "Lang-3",
-      "outcome": "TIMEOUT",
-      "turns_used": 37,
-      "model": "qwen32b",
-      "total_tokens_in": 75200,
-      "total_tokens_out": 2873,
-      "wall_clock_s": 383.7,
-      "edits_applied": 1,
-      "fix_attempts": 1,
-      "escalation": null,
-      "ts": "2026-09-17T09:57:00.753427+00:00",
-      "run_id": "Lang-3_qwen32b_fsm_20260917T152037"
-    },
-    {
-      "type": "run_summary",
-      "bug_id": "Lang-4",
-      "outcome": "TIMEOUT",
-      "turns_used": 37,
-      "model": "qwen32b",
-      "total_tokens_in": 74231,
-      "total_tokens_out": 2858,
-      "wall_clock_s": 288.7,
-      "edits_applied": 3,
-      "fix_attempts": 3,
-      "escalation": null,
-      "ts": "2026-09-17T10:01:49.466241+00:00",
-      "run_id": "Lang-4_qwen32b_fsm_20260917T152700"
-    },
-    {
-      "type": "run_summary",
-      "bug_id": "Lang-5",
-      "outcome": "ESCALATED",
-      "turns_used": 30,
-      "model": "qwen32b",
-      "total_tokens_in": 67922,
-      "total_tokens_out": 2676,
-      "wall_clock_s": 582.4,
-      "edits_applied": 5,
-      "fix_attempts": 5,
-      "escalation": null,
-      "ts": "2026-09-17T10:11:31.926853+00:00",
-      "run_id": "Lang-5_qwen32b_fsm_20260917T153149"
-    },
-    {
-      "type": "run_summary",
       "bug_id": "Lang-6",
       "outcome": "TIMEOUT",
-      "turns_used": 43,
+      "turns_used": 41,
       "model": "qwen32b",
-      "total_tokens_in": 71000,
-      "total_tokens_out": 3448,
-      "wall_clock_s": 368.3,
-      "edits_applied": 0,
-      "fix_attempts": 0,
+      "total_tokens_in": 76164,
+      "total_tokens_out": 3498,
+      "wall_clock_s": 321.6,
+      "edits_applied": 6,
+      "fix_attempts": 6,
       "escalation": null,
-      "ts": "2026-09-17T10:17:40.265423+00:00",
-      "run_id": "Lang-6_qwen32b_fsm_20260917T154131"
+      "ts": "2026-09-17T10:27:46.096223+00:00",
+      "run_id": "Lang-6_qwen32b_fsm_20260917T155224"
     }
   ]
 }

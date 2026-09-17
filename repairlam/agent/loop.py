@@ -124,6 +124,8 @@ def run_bug(project, bug, ctx, results):
             allowed = set(ALLOWED[state])
             if reads_since_edit > 3 and state in ("TRY_FIX", "REFLECT"):
                 allowed -= {"read_file", "search_repo", "get_test_output"}
+            if history and history[-1].startswith("[system] Edit applied"):
+                allowed = {"run_tests"}
             urgent = ("\nYOU HAVE READ ENOUGH. You must call apply_edit now "
                       "with your best hypothesis, or escalate.\n"
                       if reads_since_edit > 3 else "")
@@ -174,6 +176,9 @@ def run_bug(project, bug, ctx, results):
                     continue
             if tool in ("apply_edit", "run_tests"):
                 reads_since_edit = 0
+            if tool == "apply_edit" and res.status == "ok":
+                history.append("[system] Edit applied. You MUST call run_tests "
+                               "as your very next action before doing anything else.")
 
             if tool not in ALLOWED[state]:
                 msg = (f"'{tool}' is not allowed in {state}. "
