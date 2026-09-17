@@ -101,7 +101,11 @@ def run_bug(project, bug, ctx, results):
             log.summary(bug_id, "ERROR", model=MODEL, note="compile failed")
             print("  ERROR compile"); return "ERROR"
 
-        disp = Dispatcher(wd, log, bug_id)
+        initial = d4j.run_tests(wd, timeout=600)
+        trigger_class = (initial.failing[0].split("::")[0]
+                         if initial.failing else None)
+        disp = Dispatcher(wd, log, bug_id, trigger_class=trigger_class)
+        disp.last_test = initial
         try:
             hint_file = str(d4j.buggy_file(wd).relative_to(wd))
         except Exception:

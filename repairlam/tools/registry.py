@@ -70,10 +70,11 @@ def tools_doc() -> str:
 class Dispatcher:
     """Executes a tool call against one bug's workspace."""
 
-    def __init__(self, workdir, log=None, bug_id=None):
+    def __init__(self, workdir, log=None, bug_id=None, trigger_class=None):
         self.workdir = str(workdir)
         self.log = log
         self.bug_id = bug_id
+        self.trigger_class = trigger_class
         self.last_test = None
         self.edits = []
 
@@ -128,10 +129,13 @@ class Dispatcher:
         if not ok:
             self.last_test = None
             return ToolResult("ok", f"COMPILE FAILED\n{truncate_trace(out)}")
-        t = d4j.run_tests(self.workdir)
+        t = d4j.run_tests(self.workdir, timeout=180, test_class=self.trigger_class)
         self.last_test = t
         if t.passed:
-            return ToolResult("ok", "ALL TESTS PASS")
+            msg = ("TRIGGER TEST PASSES (only the failing test class was run; "
+                   "a full-suite check happens automatically before finish)"
+                   if self.trigger_class else "ALL TESTS PASS")
+            return ToolResult("ok", msg)
         names = "\n".join(f"  - {n}" for n in t.failing[:5])
         return ToolResult("ok",
                           f"STILL FAILING ({len(t.failing)}):\n{names}\n\n"
