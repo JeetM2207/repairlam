@@ -44,8 +44,30 @@ def ask(messages, max_tokens):
             int((time.time() - t0) * 1000))
 
 
+def _repair_json(t):
+    """Fix the two most common ways models break JSON when embedding code:
+    literal newlines inside a string value, and unescaped double quotes."""
+    out = []
+    in_str = False
+    i = 0
+    while i < len(t):
+        c = t[i]
+        if c == '"' and (i == 0 or t[i-1] != "\\"):
+            in_str = not in_str
+            out.append(c)
+        elif in_str and c == "\n":
+            out.append("\\n")
+        elif in_str and c == "\t":
+            out.append("\\t")
+        else:
+            out.append(c)
+        i += 1
+    return "".join(out)
+
+
 def parse_action(text):
-    """Extract {thought, action} from the model reply. Tolerant of fences."""
+    """Extract {thought, action} from the model reply. Tolerant of fences
+    and of the model embedding raw newlines/quotes inside JSON strings."""
     t = text.strip()
     if "```" in t:
         m = re.search(r"```(?:json)?\s*(.*?)```", t, re.S)
@@ -54,10 +76,17 @@ def parse_action(text):
     i, j = t.find("{"), t.rfind("}")
     if i == -1 or j == -1:
         return None, None, "no JSON object found"
-    try:
-        obj = json.loads(t[i:j + 1])
-    except json.JSONDecodeError as e:
-        return None, None, f"invalid JSON: {e}"
+    raw = t[i:j + 1]
+
+    for candidate in (raw, _repair_json(raw)):
+        try:
+            obj = json.loads(candidate)
+            break
+        except json.JSONDecodeError as e:
+            last_err = e
+    else:
+        return None, None, f"invalid JSON: {last_err}"
+
     act = obj.get("action") or {}
     tool = act.get("tool")
     if not tool:
