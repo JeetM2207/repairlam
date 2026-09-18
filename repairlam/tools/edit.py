@@ -45,8 +45,11 @@ def apply_edit(path, find: str, replace: str) -> EditResult:
 
     if n > 1:
         return EditResult(False, "ambiguous",
-                          f"anchor text appears {n} times; include more "
-                          "surrounding context to make it unique",
+                          f"anchor text appears {n} times; do not retry the "
+                          "same snippet. Expand find to include more "
+                          "surrounding context -- e.g. the enclosing method "
+                          "signature, or 2-3 lines of unique code before "
+                          "and/or after -- so it matches exactly once.",
                           occurrences=n)
 
     line = text[:text.index(find)].count("\n") + 1

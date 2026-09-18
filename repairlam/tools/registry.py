@@ -1,10 +1,14 @@
 import re
 """Tool schemas shown to the model, and the dispatcher that executes them."""
+import difflib
 import json
 from dataclasses import dataclass
 from repairlam.tools.edit import apply_edit
 from repairlam.tools.read import read_file, search_repo, truncate_trace
 from repairlam.env import d4j
+
+READ_HEADER_RE = re.compile(r"^# (.+) lines (\d+)-(\d+) of (\d+)$")
+READ_LINE_RE = re.compile(r"^\s*(\d+)\|\s?(.*)$")
 
 
 @dataclass
@@ -77,6 +81,7 @@ class Dispatcher:
         self.trigger_class = trigger_class
         self.last_test = None
         self.edits = []
+        self.reads = []   # [{"path": str, "start": int, "lines": [str, ...]}]
 
     def call(self, tool: str, args: dict) -> ToolResult:
         if tool not in TOOLS:
@@ -102,9 +107,51 @@ class Dispatcher:
                           f"{truncate_trace(t.raw)}")
 
     def _read_file(self, a):
-        return ToolResult("ok", read_file(self.workdir, a["path"],
-                                          int(a.get("start", 1)),
-                                          int(a["end"]) if a.get("end") else None))
+        out = read_file(self.workdir, a["path"], int(a.get("start", 1)),
+                        int(a["end"]) if a.get("end") else None)
+        self._record_read(out)
+        return ToolResult("ok", out)
+
+    def _record_read(self, out):
+        """Store the literal lines returned by read_file so a later
+        not_found apply_edit can be shown real text to copy from."""
+        lines = out.splitlines()
+        if not lines:
+            return
+        m = READ_HEADER_RE.match(lines[0])
+        if not m:
+            return
+        path, start = m.group(1), int(m.group(2))
+        content = []
+        for ln in lines[1:]:
+            lm = READ_LINE_RE.match(ln)
+            if lm:
+                content.append(lm.group(2))
+        if content:
+            self.reads.append({"path": path, "start": start, "lines": content})
+
+    def _closest_match(self, find):
+        """Fuzzy-match `find` against every line window seen via read_file
+        this run. Returns a real snippet (path + line) to show the model,
+        or None if nothing was ever read."""
+        find_lines = find.splitlines() or [find]
+        k = len(find_lines)
+        candidates = []   # (window_text, path, line_no)
+        for r in self.reads:
+            lines = r["lines"]
+            for i in range(max(1, len(lines) - k + 1)):
+                window = lines[i:i + k]
+                candidates.append(("\n".join(window), r["path"], r["start"] + i))
+        if not candidates:
+            return None
+        texts = [c[0] for c in candidates]
+        best = difflib.get_close_matches(find, texts, n=1, cutoff=0.3)
+        if not best:
+            return None
+        path, line_no = next((p, l) for t, p, l in candidates if t == best[0])
+        return (f"Closest real text found in {path} near line {line_no} -- "
+                f"copy the find text from here instead of guessing again:\n"
+                f"{best[0]}")
 
     def _search_repo(self, a):
         return ToolResult("ok", search_repo(self.workdir, a["pattern"]))
@@ -118,7 +165,12 @@ class Dispatcher:
         repl = re.sub(r"^\s*\d+\|\s?", "", a["replace"], flags=re.M)
         r = apply_edit(f"{self.workdir}/{a['path']}", find, repl)
         if not r.ok:
-            return ToolResult("rejected", r.message)
+            msg = r.message
+            if r.status == "not_found":
+                suggestion = self._closest_match(find)
+                if suggestion:
+                    msg += "\n\n" + suggestion
+            return ToolResult("rejected", msg)
         self.edits.append({"path": a["path"], "line": r.line,
                            "find": a["find"], "replace": a["replace"]})
         self.last_test = None          # results are now stale
