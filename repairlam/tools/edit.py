@@ -37,8 +37,10 @@ def apply_edit(path, find: str, replace: str) -> EditResult:
 
     if n == 0:
         return EditResult(False, "not_found",
-                          "anchor text not found in file; re-read the file "
-                          "and copy the exact text including whitespace",
+                          "anchor text not found in file. The find text must "
+                          "be copied character-for-character from a file "
+                          "read via read_file in THIS conversation -- never "
+                          "written from memory or training data.",
                           occurrences=0)
 
     if n > 1:

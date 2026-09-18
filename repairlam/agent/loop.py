@@ -144,6 +144,7 @@ def run_bug(project, bug, ctx, results):
         history = []
         state, attempts, outcome = "UNDERSTAND", 0, "FAILED"
         reads_since_edit = 0
+        files_read = {}
         escalation = None
 
         turn = 0
@@ -225,6 +226,12 @@ def run_bug(project, bug, ctx, results):
             elif tool == "run_tests":
                 reads_since_edit = 0
 
+            reread_path = None
+            if tool == "read_file":
+                reread_path = args.get("path")
+                if reread_path:
+                    files_read[reread_path] = files_read.get(reread_path, 0) + 1
+
             log.event(bug_id, state, thought=thought, tool=tool,
                       args={k: str(v)[:200] for k, v in args.items()},
                       result_status=res.status,
@@ -237,6 +244,10 @@ def run_bug(project, bug, ctx, results):
             if tool == "apply_edit" and res.status == "ok":
                 history.append("[system] Edit applied. You MUST call run_tests "
                                "as your very next action before doing anything else.")
+            if reread_path and files_read.get(reread_path, 0) >= 2:
+                history.append(f"[system] You already read {reread_path}. Now read "
+                               "the SOURCE file (not the test file) where the buggy "
+                               "method is defined.")
 
             if tool == "finish":
                 t = d4j.run_tests(wd)
