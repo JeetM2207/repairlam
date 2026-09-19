@@ -17,6 +17,9 @@ RESULTS = f"{BTP}/repairlam/results"
 
 MAX_TURNS = 30
 MAX_FIX_ATTEMPTS = 5
+COLLECT_READ_LIMIT = 5   # read_file/search_repo calls allowed in COLLECT
+                         # before read_file is blocked in favor of
+                         # search_repo or committing via identify_bug_method
 KEEP_RECENT = 6          # verbatim history turns before summarising
 SAFETY = 800
 
@@ -102,8 +105,8 @@ def next_state(state, tool, result, attempts):
         return "ESCALATE"
     if state == "UNDERSTAND" and tool == "read_file":
         return "COLLECT"
-    if state == "COLLECT" and tool in ("read_file", "search_repo"):
-        return "TRY_FIX"
+    if state == "COLLECT" and tool == "identify_bug_method":
+        return "TRY_FIX" if result.status == "ok" else "COLLECT"
     if tool == "run_tests":
         if "ALL TESTS PASS" in result.output:
             return "TRY_FIX"        # model should now call finish
@@ -134,16 +137,18 @@ def run_bug(project, bug, ctx, results):
         initial = d4j.run_tests(wd, timeout=600)
         trigger_class = (initial.failing[0].split("::")[0]
                          if initial.failing else None)
-        disp = Dispatcher(wd, log, bug_id, trigger_class=trigger_class)
-        disp.last_test = initial
         try:
             hint_file = str(d4j.buggy_file(wd).relative_to(wd))
         except Exception:
             hint_file = None
+        disp = Dispatcher(wd, log, bug_id, trigger_class=trigger_class,
+                          hint_file=hint_file)
+        disp.last_test = initial
         sysmsg = system_prompt()
         history = []
         state, attempts, outcome = "UNDERSTAND", 0, "FAILED"
         reads_since_edit = 0
+        collect_reads = 0
         files_read = {}
         escalation = None
 
@@ -159,11 +164,18 @@ def run_bug(project, bug, ctx, results):
             allowed = set(ALLOWED[state])
             if reads_since_edit > 3 and state in ("TRY_FIX", "REFLECT"):
                 allowed -= {"read_file", "search_repo", "get_test_output"}
+            if collect_reads > COLLECT_READ_LIMIT and state == "COLLECT":
+                allowed -= {"read_file", "get_test_output"}
             if history and history[-1].startswith("[system] Edit applied"):
                 allowed = {"run_tests"}
             urgent = ("\nYOU HAVE READ ENOUGH. You must call apply_edit now "
                       "with your best hypothesis, or escalate.\n"
                       if reads_since_edit > 3 else "")
+            if collect_reads > COLLECT_READ_LIMIT and state == "COLLECT":
+                urgent += ("\nYOU HAVE READ ENOUGH IN COLLECT. Call "
+                           "identify_bug_method now with your best-guess "
+                           "method name, or call search_repo with a specific "
+                           "term. Do not keep reading sequentially.\n")
             user = (hint + f"{state_prompt(state)}{urgent}\n\n"
                     f"Allowed tools this phase: {', '.join(sorted(allowed))}\n\n"
                     f"--- history ---\n{convo}\n--- end history ---\n\n"
@@ -207,6 +219,22 @@ def run_bug(project, bug, ctx, results):
                               tokens_in=ti, tokens_out=to, latency_ms=ms,
                               model=MODEL)
                     print(f"  {turn} {state} read-limit", flush=True)
+                    turn -= 1
+                    continue
+
+            if tool in ("read_file", "search_repo") and state == "COLLECT":
+                collect_reads += 1
+                if tool == "read_file" and collect_reads > COLLECT_READ_LIMIT:
+                    msg = ("BLOCKED: you've read enough with read_file. Call "
+                           "identify_bug_method now with your best-guess "
+                           "method name, or call search_repo with a specific "
+                           "term. Reading sequentially is disabled.")
+                    history.append(f"[you] tried {tool}\n[system] {msg}")
+                    log.event(bug_id, state, thought=thought, tool=tool,
+                              result_status="blocked", result_summary=msg,
+                              tokens_in=ti, tokens_out=to, latency_ms=ms,
+                              model=MODEL)
+                    print(f"  {turn} {state} collect-read-limit", flush=True)
                     turn -= 1
                     continue
             if tool not in ALLOWED[state]:

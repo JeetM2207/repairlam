@@ -3,6 +3,7 @@ import re
 import difflib
 import json
 from dataclasses import dataclass
+from pathlib import Path
 from repairlam.tools.edit import apply_edit
 from repairlam.tools.read import read_file, search_repo, truncate_trace
 from repairlam.env import d4j
@@ -35,6 +36,11 @@ TOOLS = {
                 "Use this to locate a method or symbol.",
         "args": {"pattern": "str, regular expression"},
     },
+    "identify_bug_method": {
+        "desc": "State the exact method name you believe contains the bug. "
+                "Checked against the codebase; required to leave COLLECT.",
+        "args": {"method_name": "str, exact method name, e.g. 'createNumber'"},
+    },
     "apply_edit": {
         "desc": "Replace an exact snippet of text in a file. The 'find' text "
                 "must appear EXACTLY ONCE, copied verbatim including "
@@ -62,10 +68,21 @@ TOOLS = {
 }
 
 
-def tools_doc() -> str:
-    """Render the tool list for the system prompt."""
+def tools_doc(exclude=()) -> str:
+    """Render the tool list for the system prompt.
+
+    `exclude` keeps a tool out of the shared system prompt entirely (used
+    for state-specific tools whose schema is instead folded into that
+    state's own user-message prompt) -- the system prompt is sent on every
+    turn regardless of state, and at temperature=0 even a small, unrelated
+    addition to it can shift greedy decoding in states that never use the
+    new tool at all. Keeping it out of the always-on system prompt confines
+    its blast radius to the one state that actually needs it.
+    """
     out = []
     for name, spec in TOOLS.items():
+        if name in exclude:
+            continue
         args = ", ".join(f"{k} ({v})" for k, v in spec["args"].items()) or "none"
         out.append(f"- {name}\n    {spec['desc']}\n    args: {args}")
     return "\n".join(out)
@@ -74,11 +91,13 @@ def tools_doc() -> str:
 class Dispatcher:
     """Executes a tool call against one bug's workspace."""
 
-    def __init__(self, workdir, log=None, bug_id=None, trigger_class=None):
+    def __init__(self, workdir, log=None, bug_id=None, trigger_class=None,
+                 hint_file=None):
         self.workdir = str(workdir)
         self.log = log
         self.bug_id = bug_id
         self.trigger_class = trigger_class
+        self.hint_file = hint_file
         self.last_test = None
         self.edits = []
         self.reads = []   # [{"path": str, "start": int, "lines": [str, ...]}]
@@ -154,7 +173,45 @@ class Dispatcher:
                 f"{best[0]}")
 
     def _search_repo(self, a):
-        return ToolResult("ok", search_repo(self.workdir, a["pattern"]))
+        return ToolResult("ok", search_repo(self.workdir, a["pattern"],
+                                            hint_file=self.hint_file))
+
+    _DECL_TEMPLATE = (r"(?:public|private|protected|static|final|abstract|"
+                       r"synchronized)\b[^;{{}}]*\b{name}\s*\(")
+
+    def _identify_bug_method(self, a):
+        name = (a.get("method_name") or "").strip()
+        if not re.match(r"^[A-Za-z_]\w*$", name):
+            return ToolResult("rejected",
+                              "method_name must be a single valid Java "
+                              "identifier, e.g. 'createNumber' -- not a "
+                              "sentence, path, or signature.")
+        pat = re.compile(self._DECL_TEMPLATE.format(name=re.escape(name)))
+        found = []
+        for f in Path(self.workdir).rglob("*.java"):
+            s = str(f)
+            if "/test/" in s or "/build/" in s or "/target/" in s or "/classes/" in s:
+                continue
+            try:
+                text = f.read_text(errors="replace")
+            except Exception:
+                continue
+            if pat.search(text):
+                found.append(str(f.relative_to(self.workdir)))
+        if found:
+            where = ", ".join(found[:3])
+            return ToolResult("ok",
+                              f"Confirmed: '{name}' is declared in {where}. "
+                              "You may now proceed to TRY_FIX with this as "
+                              "your target method.")
+        return ToolResult("rejected",
+                          f"'{name}' is not declared as a method anywhere in "
+                          "the source tree. This is likely a hallucinated or "
+                          "misspelled name -- it does NOT exist. Read more of "
+                          "the source file or use search_repo to find the "
+                          "real method name, then try identify_bug_method "
+                          "again. You cannot proceed to TRY_FIX until this "
+                          "succeeds.")
 
     def _apply_edit(self, a):
         if "/test/" in a["path"] or a["path"].endswith("Test.java"):

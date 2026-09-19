@@ -1,0 +1,121 @@
+server context: 14000
+FSM agent on 3 Lang bugs with qwen32b
+
+=== Lang-1 ===
+  1 UNDERSTAND get_test_output  ok
+  2 UNDERSTAND read_file        ok
+  3 COLLECT    read_file        ok
+  4 COLLECT    search_repo      ok
+  5 COLLECT    read_file        ok
+  6 COLLECT    read_file        ok
+  7 COLLECT    read_file        ok
+  8 COLLECT collect-read-limit
+  8 COLLECT    identify_bug_method ok
+  9 TRY_FIX    apply_edit       ok
+  10 TRY_FIX    run_tests        ok
+  11 REFLECT    read_file        ok
+  12 REFLECT    read_file        ok
+  13 REFLECT    read_file        ok
+  14 REFLECT read-limit
+  14 REFLECT    apply_edit       rejected
+  15 TRY_FIX read-limit
+  15 TRY_FIX    apply_edit       rejected
+  16 TRY_FIX    apply_edit       ok
+  17 TRY_FIX    run_tests        ok
+  18 REFLECT    read_file        ok
+  19 REFLECT    read_file        ok
+  20 REFLECT    read_file        ok
+  21 REFLECT read-limit
+  21 REFLECT    apply_edit       rejected
+  22 TRY_FIX read-limit
+  22 TRY_FIX    apply_edit       rejected
+  23 TRY_FIX    apply_edit       ok
+  24 TRY_FIX    run_tests        ok
+  25 REFLECT    read_file        ok
+  26 REFLECT    read_file        ok
+  27 REFLECT    read_file        ok
+  28 REFLECT read-limit
+  28 REFLECT    apply_edit       ok
+  29 TRY_FIX    run_tests        ok
+  30 REFLECT    read_file        ok
+  -> TIMEOUT (4 edits)
+
+=== Lang-5 ===
+  1 UNDERSTAND get_test_output  ok
+  2 UNDERSTAND read_file        ok
+  3 COLLECT    read_file        ok
+  4 COLLECT    search_repo      ok
+  5 COLLECT    search_repo      ok
+  6 COLLECT    search_repo      ok
+  7 COLLECT    read_file        ok
+  8 COLLECT collect-read-limit
+  8 COLLECT    identify_bug_method ok
+  9 TRY_FIX    apply_edit       ok
+  10 TRY_FIX    run_tests        ok
+  11 REFLECT blocked get_test_output
+  12 REFLECT    read_file        ok
+  13 REFLECT    read_file        ok
+  14 REFLECT    read_file        ok
+  15 REFLECT read-limit
+  15 REFLECT    apply_edit       ok
+  16 TRY_FIX    run_tests        ok
+  17 REFLECT    read_file        ok
+  18 REFLECT    read_file        ok
+  19 REFLECT    read_file        ok
+  20 REFLECT read-limit
+  20 REFLECT    apply_edit       ok
+  21 TRY_FIX    run_tests        ok
+  22 REFLECT    read_file        ok
+  23 REFLECT    read_file        ok
+  24 REFLECT    read_file        ok
+  25 REFLECT    apply_edit       ok
+  26 TRY_FIX    run_tests        ok
+  27 REFLECT    read_file        ok
+  28 REFLECT    read_file        ok
+  29 REFLECT    read_file        ok
+  30 REFLECT read-limit
+  30 REFLECT    apply_edit       rejected
+  -> TIMEOUT (4 edits)
+
+=== Lang-20 ===
+  1 UNDERSTAND get_test_output  ok
+  2 UNDERSTAND read_file        ok
+  3 COLLECT    search_repo      ok
+  4 COLLECT    read_file        ok
+  5 COLLECT    read_file        ok
+  6 COLLECT    read_file        ok
+  7 COLLECT    read_file        ok
+  8 COLLECT collect-read-limit
+  8 COLLECT    identify_bug_method ok
+  9 TRY_FIX    read_file        ok
+  10 TRY_FIX    read_file        ok
+  11 TRY_FIX    apply_edit       ok
+  12 TRY_FIX    run_tests        ok
+  13 REFLECT blocked get_test_output
+  14 REFLECT blocked get_test_output
+  15 REFLECT    read_file        ok
+  16 REFLECT    read_file        ok
+  17 REFLECT    read_file        ok
+  18 REFLECT read-limit
+  18 REFLECT    apply_edit       rejected
+  19 TRY_FIX read-limit
+  19 TRY_FIX    apply_edit       rejected
+  20 TRY_FIX    apply_edit       ok
+  21 TRY_FIX    run_tests        ok
+  22 REFLECT    read_file        ok
+  23 REFLECT    read_file        ok
+  24 REFLECT    read_file        ok
+  25 REFLECT read-limit
+  25 REFLECT    apply_edit       ok
+  26 TRY_FIX    run_tests        ok
+  27 REFLECT    apply_edit       rejected
+  28 TRY_FIX    apply_edit       rejected
+  29 TRY_FIX    apply_edit       rejected
+  30 TRY_FIX    apply_edit       rejected
+  -> TIMEOUT (3 edits)
+
+========================================
+TIMEOUT      3
+
+plausible: 0/3 = 0.0%
+results -> /home/23ucs603/btp/repairlam/results/phase2_fsm_Lang_qwen32b.json

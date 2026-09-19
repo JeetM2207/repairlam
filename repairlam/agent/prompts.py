@@ -41,10 +41,38 @@ Do NOT edit anything yet.
 Read the failing assertion and the test method that produced it.""",
 
     "COLLECT": """CURRENT PHASE: COLLECT
-Goal: locate the buggy code and read enough of it to form a hypothesis.
-Allowed tools: search_repo, read_file, get_test_output.
+Goal: locate the EXACT method containing the bug, and read enough of it to
+form a hypothesis, before doing anything else.
+Allowed tools: search_repo, read_file, get_test_output, identify_bug_method.
 Do NOT edit anything yet.
-Find the method named in the stack trace and read the lines around it.""",
+
+1. Prefer search_repo over reading sequentially. The failing test's name
+   often names the method directly -- a test called testJoin_ArrayChar is
+   about a method called join. search_repo for that name FIRST. Do NOT
+   read a large source file page by page from line 1 hoping to stumble
+   onto the bug; files can have thousands of lines and that wastes your
+   whole turn budget. Use read_file to look at a method once you roughly
+   know where it is, not to scan for it.
+2. Identify the exact method. The stack trace or failing assertion points
+   at a class, but that file may have dozens of methods. Do not stop once
+   you've found the right FILE -- find the specific method whose logic
+   produces the wrong output, and read its full body before forming a
+   hypothesis.
+3. Once you believe you know the method, call identify_bug_method with its
+   exact name (args: method_name, e.g. "action": {"tool":
+   "identify_bug_method", "args": {"method_name": "createNumber"}}). This
+   is checked against the real codebase -- if the name doesn't exist as an
+   actual method declaration, you'll be told so and must keep looking. You
+   cannot move to TRY_FIX until this succeeds.
+4. Consider deletion, not just addition. Many real bugs are fixed by
+   REMOVING code -- a redundant special-case branch, a condition that
+   should not be there, an extra loop -- not by adding a null check or a
+   new helper method. For example: a locale-parsing method had an entire
+   extra "if (firstChar == '_') { ... }" branch that mishandled a valid
+   input format; the correct fix was to DELETE that whole branch, not
+   patch around it. Before you commit to a hypothesis, ask yourself: does
+   this method contain logic that should not be there at all, and would
+   the fix be to remove it?""",
 
     "TRY_FIX": """CURRENT PHASE: TRY_FIX
 Goal: make one minimal edit, then verify it.
@@ -65,14 +93,17 @@ same assertion keeps failing, call escalate.""",
 
 ALLOWED = {
     "UNDERSTAND": {"get_test_output", "read_file", "search_repo"},
-    "COLLECT":    {"search_repo", "read_file", "get_test_output"},
+    "COLLECT":    {"search_repo", "read_file", "get_test_output", "identify_bug_method"},
     "TRY_FIX":    {"apply_edit", "run_tests", "read_file", "search_repo", "finish", "escalate"},
     "REFLECT":    {"read_file", "search_repo", "apply_edit", "run_tests", "escalate"},
 }
 
 
 def system_prompt() -> str:
-    return SYSTEM.format(tools=tools_doc())
+    # identify_bug_method is COLLECT-only; its schema is folded into
+    # STATE_GUIDE["COLLECT"] instead of the always-on system prompt so it
+    # can't shift greedy decoding (temperature=0) in unrelated states.
+    return SYSTEM.format(tools=tools_doc(exclude={"identify_bug_method"}))
 
 
 def state_prompt(state: str) -> str:
