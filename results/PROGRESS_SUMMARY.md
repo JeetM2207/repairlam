@@ -52,16 +52,20 @@ clean, real edit attempts (`results/edit_quality_analysis.md`) found:
   plausible-looking method in the same file. The third found the right
   method but the wrong branch, and partly reversed its own edit across two
   attempts.
-- **Deletion bias.** All three real fixes were partial or full deletions
-  of buggy code (a leading-zero-stripping loop, an entire mishandled
-  branch, a hardcoded capacity formula). Every model edit was an addition
-  or a small conditional tweak — never a deletion. The anchored,
-  one-`find`→`replace`-at-a-time edit tool may itself be structurally
-  biasing the model away from proposing the large removals these bugs
-  actually need.
+- **No addition/deletion bias found.** An earlier pass of this analysis
+  claimed all three real fixes were deletions of buggy code; that was
+  based on a misread of the defects4j patch direction and has been
+  corrected (`edit_quality_analysis.md`, 2026-09-19). Verified directly via
+  `defects4j checkout -v <id>b` vs `-v <id>f`: two of the three real fixes
+  (Lang-1, Lang-5) are substantial *additions* (a leading-zero-stripping
+  loop; a whole missing branch for underscore-prefixed input), and one
+  (Lang-20) simplifies an overcomplicated formula into something shorter.
+  The model's own edits were consistently additive regardless of bug — so
+  this axis doesn't explain the failures at all; it's location, not edit
+  shape.
 
 This is not a tooling, parsing, or anchor-matching problem — by the time
 these edits landed, `apply_edit` had already confirmed the anchor text was
-real and unique. The gap is upstream: fault localization within a file,
-and a bias toward additive edits over the deletions several of these bugs
-require.
+real and unique. The gap is upstream: fault localization within a file —
+the model doesn't reliably find which method the bug is actually in once
+it's past the file-level hint.
