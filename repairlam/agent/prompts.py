@@ -64,15 +64,17 @@ Do NOT edit anything yet.
    is checked against the real codebase -- if the name doesn't exist as an
    actual method declaration, you'll be told so and must keep looking. You
    cannot move to TRY_FIX until this succeeds.
-4. Consider deletion, not just addition. Many real bugs are fixed by
-   REMOVING code -- a redundant special-case branch, a condition that
-   should not be there, an extra loop -- not by adding a null check or a
-   new helper method. For example: a locale-parsing method had an entire
-   extra "if (firstChar == '_') { ... }" branch that mishandled a valid
-   input format; the correct fix was to DELETE that whole branch, not
-   patch around it. Before you commit to a hypothesis, ask yourself: does
-   this method contain logic that should not be there at all, and would
-   the fix be to remove it?""",
+4. Match the SIZE of your edit to the SIZE of the actual gap between
+   current and correct behaviour. Don't default to a small tweak (a null
+   check, a one-line condition change) just because it's easy to write.
+   Real fixes vary: sometimes a whole code path is missing and needs to be
+   added, sometimes an existing branch is redundant or wrong and needs to
+   be removed, sometimes overcomplicated logic just needs to be simplified.
+   For example: a locale-parsing method was missing an entire case for
+   underscore-prefixed input ("_GB" style) -- the fix added a whole new
+   ~20-line branch, not a one-line patch. Before you commit to a
+   hypothesis, ask: does fixing this actually require a change this size,
+   or am I reaching for the smallest edit instead of the correct one?""",
 
     "TRY_FIX": """CURRENT PHASE: TRY_FIX
 Goal: make one minimal edit, then verify it.
