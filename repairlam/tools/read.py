@@ -32,11 +32,16 @@ def read_file(workdir, path: str, start: int = 1, end: int = None) -> str:
     return header + "\n" + "\n".join(out)
 
 
-def _run_search(workdir, rx, glob):
+def _run_search(workdir, rx, glob, priority_path=None):
     hits = []
     src = Path(workdir)
     files = sorted(src.rglob(glob),
                    key=lambda f: ("/test/" in str(f), str(f)))
+    if priority_path:
+        pf = src / priority_path
+        if pf in files:
+            files.remove(pf)
+            files.insert(0, pf)
     for f in files:
         s = str(f)
         if "/build/" in s or "/target/" in s or "/classes/" in s:
@@ -59,7 +64,7 @@ def _format_hits(hits):
     return "\n".join(hits) + note
 
 
-def _loose_identifier(pattern):
+def loose_identifier(pattern):
     """Best-effort extraction of a bare method/identifier name from a
     signature-shaped search pattern, for a fallback retry on zero hits."""
     m = re.search(r"([A-Za-z_]\w*)\s*\\?\(", pattern)
@@ -67,6 +72,21 @@ def _loose_identifier(pattern):
         return m.group(1)
     idents = re.findall(r"[A-Za-z_]\w*", pattern)
     return max(idents, key=len) if idents else None
+
+
+_TEST_NAME_RE = re.compile(r"^test[A-Z_]\w*$")
+_ISSUE_ID_RE = re.compile(r"(?i)^(?:test)?[A-Z]{2,8}[-_]\d{2,6}$")
+
+
+def looks_like_test_name(pattern):
+    """True if every identifier in `pattern` looks like a JUnit test method
+    name (testFooBar) or a JIRA/issue id (LANG_831) rather than a real
+    source symbol -- these never appear as declarations in src/main, so
+    searching for them is a guaranteed dead end."""
+    idents = re.findall(r"[A-Za-z_]\w*", pattern)
+    if not idents:
+        return False
+    return all(_TEST_NAME_RE.match(t) or _ISSUE_ID_RE.match(t) for t in idents)
 
 
 _METHOD_DECL_RE = re.compile(
@@ -97,19 +117,27 @@ def search_repo(workdir, pattern: str, glob: str = "*.java", hint_file: str = No
     with a bare identifier extracted from the pattern; if that also finds
     nothing, lists real method names from hint_file so the model has
     something concrete to act on instead of guessing another pattern blind."""
+    if looks_like_test_name(pattern):
+        return (f"'{pattern}' looks like a test method name or an issue/"
+                f"ticket ID, not a real source symbol -- it will never "
+                f"match anything in src/main. Search for the actual method "
+                f"or class name from the bug description or stack trace "
+                f"instead.")
+
     try:
         rx = re.compile(pattern)
     except re.error as e:
         return f"ERROR: bad regex: {e}"
 
-    hits = _run_search(workdir, rx, glob)
+    hits = _run_search(workdir, rx, glob, priority_path=hint_file)
     if hits:
         return _format_hits(hits)
 
-    loose = _loose_identifier(pattern)
+    loose = loose_identifier(pattern)
     if loose and loose != pattern:
         try:
-            loose_hits = _run_search(workdir, re.compile(re.escape(loose)), glob)
+            loose_rx = re.compile(r"\b" + re.escape(loose) + r"\b")
+            loose_hits = _run_search(workdir, loose_rx, glob, priority_path=hint_file)
         except re.error:
             loose_hits = []
         if loose_hits:

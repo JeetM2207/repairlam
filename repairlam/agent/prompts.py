@@ -47,12 +47,20 @@ Allowed tools: search_repo, read_file, get_test_output, identify_bug_method.
 Do NOT edit anything yet.
 
 1. Prefer search_repo over reading sequentially. The failing test's name
-   often names the method directly -- a test called testJoin_ArrayChar is
-   about a method called join. search_repo for that name FIRST. Do NOT
-   read a large source file page by page from line 1 hoping to stumble
-   onto the bug; files can have thousands of lines and that wastes your
-   whole turn budget. Use read_file to look at a method once you roughly
-   know where it is, not to scan for it.
+   often *contains* the real method name, but is not itself a source
+   symbol -- a test called testJoin_ArrayChar is about a method called
+   join, so search_repo for "join", never for "testJoin_ArrayChar" or an
+   issue/ticket id like "LANG_831". Test names and ticket ids do not exist
+   in src/main and will never match.
+   search_repo pattern MUST be the bare method name ONLY (e.g. "join"),
+   never a full signature. You do not know the real parameter types yet --
+   that is what reading the match tells you. A pattern like
+   "join\\(char\\[\\], CharSequence\\)" will fail forever if you guessed
+   the types wrong; "join" will find it regardless.
+   Do NOT read a large source file page by page from line 1 hoping to
+   stumble onto the bug; files can have thousands of lines and that wastes
+   your whole turn budget. Use read_file to look at a method once you
+   roughly know where it is, not to scan for it.
 2. Identify the exact method. The stack trace or failing assertion points
    at a class, but that file may have dozens of methods. Do not stop once
    you've found the right FILE -- find the specific method whose logic

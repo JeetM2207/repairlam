@@ -20,6 +20,10 @@ MAX_FIX_ATTEMPTS = 5
 COLLECT_READ_LIMIT = 5   # read_file/search_repo calls allowed in COLLECT
                          # before read_file is blocked in favor of
                          # search_repo or committing via identify_bug_method
+COLLECT_FORCE_TURN = 8   # read_file/search_repo calls in COLLECT after which
+                         # the FSM stops waiting for the model to commit and
+                         # forces identify_bug_method with a best-guess name
+                         # derived from whatever was last searched/read
 KEEP_RECENT = 6          # verbatim history turns before summarising
 SAFETY = 800
 
@@ -149,12 +153,35 @@ def run_bug(project, bug, ctx, results):
         state, attempts, outcome = "UNDERSTAND", 0, "FAILED"
         reads_since_edit = 0
         collect_reads = 0
+        collect_last_search_pattern = None
+        collect_last_read_path = None
         files_read = {}
         escalation = None
 
         turn = 0
         while turn < MAX_TURNS:
             turn += 1
+
+            if state == "COLLECT" and collect_reads >= COLLECT_FORCE_TURN:
+                candidate, fres = disp.force_identify_method(
+                    last_search_pattern=collect_last_search_pattern,
+                    last_read_path=collect_last_read_path)
+                log.event(bug_id, state,
+                          thought="[forced] COLLECT ran too long without a "
+                                  "committed method; committing to whatever "
+                                  "was last searched or read instead of "
+                                  "continuing to wander.",
+                          tool="identify_bug_method",
+                          args={"method_name": candidate},
+                          result_status=fres.status, result_summary=fres.output[:300],
+                          tokens_in=0, tokens_out=0, latency_ms=0, model=MODEL)
+                print(f"  {turn} {state} forced-commit -> {candidate} ({fres.status})",
+                      flush=True)
+                history.append(f"[system] COLLECT turn limit reached. Forced "
+                               f"commit to '{candidate}': {fres.output[:200]}")
+                state = "TRY_FIX"
+                continue
+
             recent = history[-KEEP_RECENT:]
             older = len(history) - len(recent)
             note = (f"[{older} earlier turns omitted]\n" if older > 0 else "")
@@ -259,6 +286,13 @@ def run_bug(project, bug, ctx, results):
                 reread_path = args.get("path")
                 if reread_path:
                     files_read[reread_path] = files_read.get(reread_path, 0) + 1
+
+            if state == "COLLECT":
+                if tool == "search_repo":
+                    collect_last_search_pattern = args.get("pattern")
+                elif tool == "read_file" and reread_path:
+                    if "/test/" not in reread_path and not reread_path.endswith("Test.java"):
+                        collect_last_read_path = reread_path
 
             log.event(bug_id, state, thought=thought, tool=tool,
                       args={k: str(v)[:200] for k, v in args.items()},

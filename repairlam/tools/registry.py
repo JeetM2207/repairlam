@@ -5,7 +5,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 from repairlam.tools.edit import apply_edit
-from repairlam.tools.read import read_file, search_repo, truncate_trace
+from repairlam.tools.read import read_file, search_repo, truncate_trace, list_methods, loose_identifier
 from repairlam.env import d4j
 
 READ_HEADER_RE = re.compile(r"^# (.+) lines (\d+)-(\d+) of (\d+)$")
@@ -212,6 +212,29 @@ class Dispatcher:
                           "real method name, then try identify_bug_method "
                           "again. You cannot proceed to TRY_FIX until this "
                           "succeeds.")
+
+    def force_identify_method(self, last_search_pattern=None, last_read_path=None):
+        """Called by the FSM when COLLECT has run too long without a
+        committed method. Derives a best-guess name from whatever the model
+        was last searching for or reading (never invents one), validates it
+        the same way identify_bug_method does, and returns
+        (candidate_name_or_None, ToolResult)."""
+        candidate = None
+        if last_search_pattern:
+            candidate = loose_identifier(last_search_pattern)
+        if not candidate and last_read_path:
+            for r in reversed(self.reads):
+                if r["path"] == last_read_path:
+                    text = "\n".join(r["lines"])
+                    found = list_methods(text, limit=1)
+                    if found:
+                        candidate = found[0].split(": ", 1)[1]
+                    break
+        if not candidate:
+            return None, ToolResult("rejected",
+                                    "no candidate method name could be derived "
+                                    "from anything searched or read this run")
+        return candidate, self._identify_bug_method({"method_name": candidate})
 
     def _apply_edit(self, a):
         if "/test/" in a["path"] or a["path"].endswith("Test.java"):
