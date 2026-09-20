@@ -122,6 +122,219 @@ def next_state(state, tool, result, attempts):
     return state
 
 
+def run_fsm_core(disp, ctx, hint_file, log, bug_id, env, extra_context=None):
+    """The reusable FSM state machine: UNDERSTAND -> COLLECT -> TRY_FIX ->
+    REFLECT, one action per turn, against an already-constructed Dispatcher
+    (checkout/compile/initial test run already done by the caller). Used by
+    both the Defects4j harness (run_bug, below) and repairlam/github's
+    pipeline against a live repo -- this function has no knowledge of
+    Defects4j specifically; all environment interaction goes through `env`
+    (compile_project/run_tests) and `disp`.
+
+    `extra_context`, if given, is prepended to every turn's prompt above the
+    file hint -- used by repairlam.github's pipeline to inject the original
+    issue title/body, since a live repo has no Defects4j oracle to fall
+    back on.
+
+    Returns (outcome, escalation, attempts). Does not do final PLAUSIBLE
+    verification or cleanup -- that's the caller's job, since what counts
+    as "final verification" differs (Defects4j's full unfiltered suite vs.
+    a live repo's normal test command).
+    """
+    sysmsg = system_prompt()
+    history = []
+    state, attempts, outcome = "UNDERSTAND", 0, "FAILED"
+    reads_since_edit = 0
+    collect_reads = 0
+    collect_last_search_pattern = None
+    collect_last_read_path = None
+    files_read = {}
+    escalation = None
+
+    turn = 0
+    while turn < MAX_TURNS:
+        turn += 1
+
+        if state == "COLLECT" and collect_reads >= COLLECT_FORCE_TURN:
+            candidate, fres = disp.force_identify_method(
+                last_search_pattern=collect_last_search_pattern,
+                last_read_path=collect_last_read_path)
+            log.event(bug_id, state,
+                      thought="[forced] COLLECT ran too long without a "
+                              "committed method; committing to whatever "
+                              "was last searched or read instead of "
+                              "continuing to wander.",
+                      tool="identify_bug_method",
+                      args={"method_name": candidate},
+                      result_status=fres.status, result_summary=fres.output[:300],
+                      tokens_in=0, tokens_out=0, latency_ms=0, model=MODEL)
+            print(f"  {turn} {state} forced-commit -> {candidate} ({fres.status})",
+                  flush=True)
+            history.append(f"[system] COLLECT turn limit reached. Forced "
+                           f"commit to '{candidate}': {fres.output[:200]}")
+            state = "TRY_FIX"
+            continue
+
+        recent = history[-KEEP_RECENT:]
+        older = len(history) - len(recent)
+        note = (f"[{older} earlier turns omitted]\n" if older > 0 else "")
+        convo = note + "\n".join(recent)
+
+        hint = ((f"{extra_context}\n\n" if extra_context else "")
+                + (f"The defect is in: {hint_file}\n\n" if hint_file else ""))
+        allowed = set(ALLOWED[state])
+        if reads_since_edit > 3 and state in ("TRY_FIX", "REFLECT"):
+            allowed -= {"read_file", "search_repo", "get_test_output"}
+        if collect_reads > COLLECT_READ_LIMIT and state == "COLLECT":
+            allowed -= {"read_file", "get_test_output"}
+        if history and history[-1].startswith("[system] Edit applied"):
+            allowed = {"run_tests"}
+        urgent = ("\nYOU HAVE READ ENOUGH. You must call apply_edit now "
+                  "with your best hypothesis, or escalate.\n"
+                  if reads_since_edit > 3 else "")
+        if collect_reads > COLLECT_READ_LIMIT and state == "COLLECT":
+            urgent += ("\nYOU HAVE READ ENOUGH IN COLLECT. Call "
+                       "identify_bug_method now with your best-guess "
+                       "method name, or call search_repo with a specific "
+                       "term. Do not keep reading sequentially.\n")
+        user = (hint + f"{state_prompt(state)}{urgent}\n\n"
+                f"Allowed tools this phase: {', '.join(sorted(allowed))}\n\n"
+                f"--- history ---\n{convo}\n--- end history ---\n\n"
+                f"Turn {turn}/{MAX_TURNS}. Reply with one JSON action.")
+
+        msgs = [{"role": "system", "content": sysmsg},
+                {"role": "user", "content": user}]
+        budget = ctx - est(sysmsg + user) - SAFETY
+        if budget < 300:
+            history = history[-2:]
+            continue
+
+        text, ti, to, ms = ask(msgs, min(700, budget))
+        thought, action, err = parse_action(text)
+
+        if err:
+            history.append(f"[you] {text[:200]}\n[system] PARSE ERROR: {err}. "
+                           "Reply with only a JSON object.")
+            log.event(bug_id, state, thought=None, tool=None,
+                      result_status="parse_error", result_summary=err,
+                      tokens_in=ti, tokens_out=to, latency_ms=ms, model=MODEL)
+            print(f"  {turn} {state} parse_error", flush=True)
+            continue
+
+        tool, args = action["tool"], action["args"]
+
+        if tool in ("read_file", "search_repo") and state in ("TRY_FIX", "REFLECT"):
+            reads_since_edit += 1
+            if reads_since_edit > 10:
+                state = "ESCALATE"
+                outcome = "ESCALATED"
+                escalation = "read limit exceeded without any edit attempt"
+                print(f"  {turn} forced escalate (read limit)", flush=True)
+                break
+            if reads_since_edit > 3:
+                msg = ("BLOCKED: you already read enough. Your next action "
+                       "MUST be apply_edit or escalate. Reading is disabled.")
+                history.append(f"[you] tried {tool}\n[system] {msg}")
+                log.event(bug_id, state, thought=thought, tool=tool,
+                          result_status="blocked", result_summary=msg,
+                          tokens_in=ti, tokens_out=to, latency_ms=ms,
+                          model=MODEL)
+                print(f"  {turn} {state} read-limit", flush=True)
+                turn -= 1
+                continue
+
+        if tool in ("read_file", "search_repo") and state == "COLLECT":
+            collect_reads += 1
+            if tool == "read_file" and collect_reads > COLLECT_READ_LIMIT:
+                msg = ("BLOCKED: you've read enough with read_file. Call "
+                       "identify_bug_method now with your best-guess "
+                       "method name, or call search_repo with a specific "
+                       "term. Reading sequentially is disabled.")
+                history.append(f"[you] tried {tool}\n[system] {msg}")
+                log.event(bug_id, state, thought=thought, tool=tool,
+                          result_status="blocked", result_summary=msg,
+                          tokens_in=ti, tokens_out=to, latency_ms=ms,
+                          model=MODEL)
+                print(f"  {turn} {state} collect-read-limit", flush=True)
+                turn -= 1
+                continue
+        if tool not in ALLOWED[state]:
+            msg = (f"'{tool}' is not allowed in {state}. "
+                   f"Allowed: {', '.join(sorted(ALLOWED[state]))}")
+            history.append(f"[you] {tool}\n[system] {msg}")
+            log.event(bug_id, state, thought=thought, tool=tool, args=args,
+                      result_status="blocked", result_summary=msg,
+                      tokens_in=ti, tokens_out=to, latency_ms=ms, model=MODEL)
+            print(f"  {turn} {state} blocked {tool}", flush=True)
+            continue
+
+        res = disp.call(tool, args)
+        if tool == "apply_edit" and res.status == "ok":
+            attempts += 1
+            reads_since_edit = 0
+        elif tool == "run_tests":
+            reads_since_edit = 0
+
+        reread_path = None
+        if tool == "read_file":
+            reread_path = args.get("path")
+            if reread_path:
+                files_read[reread_path] = files_read.get(reread_path, 0) + 1
+
+        if state == "COLLECT":
+            if tool == "search_repo":
+                collect_last_search_pattern = args.get("pattern")
+            elif tool == "read_file" and reread_path:
+                if "/test/" not in reread_path and not reread_path.endswith("Test.java"):
+                    collect_last_read_path = reread_path
+
+        log.event(bug_id, state, thought=thought, tool=tool,
+                  args={k: str(v)[:200] for k, v in args.items()},
+                  result_status=res.status,
+                  result_summary=res.output[:300],
+                  tokens_in=ti, tokens_out=to, latency_ms=ms, model=MODEL)
+        print(f"  {turn} {state:10s} {tool:16s} {res.status}", flush=True)
+
+        history.append(f"[you] {thought}\n[action] {tool} {json.dumps(args)[:300]}\n"
+                       f"[result:{res.status}] {res.output[:1200]}")
+        if tool == "apply_edit" and res.status == "ok":
+            history.append("[system] Edit applied. You MUST call run_tests "
+                           "as your very next action before doing anything else.")
+        if reread_path and files_read.get(reread_path, 0) >= 2:
+            history.append(f"[system] You already read {reread_path}. Now read "
+                           "the SOURCE file (not the test file) where the buggy "
+                           "method is defined.")
+
+        if tool == "finish":
+            t = env.run_tests(disp.workdir)
+            outcome = "PLAUSIBLE" if t.passed else "FAILED"
+            break
+        if tool == "escalate" and attempts < 2:
+            history.append("[system] REJECTED: fewer than 2 fix attempts made. Try a different edit first.")
+            print(f"  {turn} {state} escalate-too-early", flush=True)
+            state = "TRY_FIX"
+            reads_since_edit = 0
+            continue
+        if tool == "escalate":
+            outcome = "ESCALATED"
+            escalation = res.output
+            break
+
+        state = next_state(state, tool, res, attempts)
+        if state == "ESCALATE":
+            outcome = "ESCALATED"
+            break
+    else:
+        outcome = "TIMEOUT"
+
+    if outcome in ("FAILED", "TIMEOUT"):
+        t = env.run_tests(disp.workdir)
+        if t.passed:
+            outcome = "PLAUSIBLE"
+
+    return outcome, escalation, attempts
+
+
 def run_bug(project, bug, ctx, results):
     bug_id = f"{project}-{bug}"
     run_id = f"{bug_id}_{MODEL}_fsm_{time.strftime('%Y%m%dT%H%M%S')}"
@@ -146,197 +359,11 @@ def run_bug(project, bug, ctx, results):
         except Exception:
             hint_file = None
         disp = Dispatcher(wd, log, bug_id, trigger_class=trigger_class,
-                          hint_file=hint_file)
+                          hint_file=hint_file, env=d4j)
         disp.last_test = initial
-        sysmsg = system_prompt()
-        history = []
-        state, attempts, outcome = "UNDERSTAND", 0, "FAILED"
-        reads_since_edit = 0
-        collect_reads = 0
-        collect_last_search_pattern = None
-        collect_last_read_path = None
-        files_read = {}
-        escalation = None
 
-        turn = 0
-        while turn < MAX_TURNS:
-            turn += 1
-
-            if state == "COLLECT" and collect_reads >= COLLECT_FORCE_TURN:
-                candidate, fres = disp.force_identify_method(
-                    last_search_pattern=collect_last_search_pattern,
-                    last_read_path=collect_last_read_path)
-                log.event(bug_id, state,
-                          thought="[forced] COLLECT ran too long without a "
-                                  "committed method; committing to whatever "
-                                  "was last searched or read instead of "
-                                  "continuing to wander.",
-                          tool="identify_bug_method",
-                          args={"method_name": candidate},
-                          result_status=fres.status, result_summary=fres.output[:300],
-                          tokens_in=0, tokens_out=0, latency_ms=0, model=MODEL)
-                print(f"  {turn} {state} forced-commit -> {candidate} ({fres.status})",
-                      flush=True)
-                history.append(f"[system] COLLECT turn limit reached. Forced "
-                               f"commit to '{candidate}': {fres.output[:200]}")
-                state = "TRY_FIX"
-                continue
-
-            recent = history[-KEEP_RECENT:]
-            older = len(history) - len(recent)
-            note = (f"[{older} earlier turns omitted]\n" if older > 0 else "")
-            convo = note + "\n".join(recent)
-
-            hint = (f"The defect is in: {hint_file}\n\n" if hint_file else "")
-            allowed = set(ALLOWED[state])
-            if reads_since_edit > 3 and state in ("TRY_FIX", "REFLECT"):
-                allowed -= {"read_file", "search_repo", "get_test_output"}
-            if collect_reads > COLLECT_READ_LIMIT and state == "COLLECT":
-                allowed -= {"read_file", "get_test_output"}
-            if history and history[-1].startswith("[system] Edit applied"):
-                allowed = {"run_tests"}
-            urgent = ("\nYOU HAVE READ ENOUGH. You must call apply_edit now "
-                      "with your best hypothesis, or escalate.\n"
-                      if reads_since_edit > 3 else "")
-            if collect_reads > COLLECT_READ_LIMIT and state == "COLLECT":
-                urgent += ("\nYOU HAVE READ ENOUGH IN COLLECT. Call "
-                           "identify_bug_method now with your best-guess "
-                           "method name, or call search_repo with a specific "
-                           "term. Do not keep reading sequentially.\n")
-            user = (hint + f"{state_prompt(state)}{urgent}\n\n"
-                    f"Allowed tools this phase: {', '.join(sorted(allowed))}\n\n"
-                    f"--- history ---\n{convo}\n--- end history ---\n\n"
-                    f"Turn {turn}/{MAX_TURNS}. Reply with one JSON action.")
-
-            msgs = [{"role": "system", "content": sysmsg},
-                    {"role": "user", "content": user}]
-            budget = ctx - est(sysmsg + user) - SAFETY
-            if budget < 300:
-                history = history[-2:]
-                continue
-
-            text, ti, to, ms = ask(msgs, min(700, budget))
-            thought, action, err = parse_action(text)
-
-            if err:
-                history.append(f"[you] {text[:200]}\n[system] PARSE ERROR: {err}. "
-                               "Reply with only a JSON object.")
-                log.event(bug_id, state, thought=None, tool=None,
-                          result_status="parse_error", result_summary=err,
-                          tokens_in=ti, tokens_out=to, latency_ms=ms, model=MODEL)
-                print(f"  {turn} {state} parse_error", flush=True)
-                continue
-
-            tool, args = action["tool"], action["args"]
-
-            if tool in ("read_file", "search_repo") and state in ("TRY_FIX", "REFLECT"):
-                reads_since_edit += 1
-                if reads_since_edit > 10:
-                    state = "ESCALATE"
-                    outcome = "ESCALATED"
-                    escalation = "read limit exceeded without any edit attempt"
-                    print(f"  {turn} forced escalate (read limit)", flush=True)
-                    break
-                if reads_since_edit > 3:
-                    msg = ("BLOCKED: you already read enough. Your next action "
-                           "MUST be apply_edit or escalate. Reading is disabled.")
-                    history.append(f"[you] tried {tool}\n[system] {msg}")
-                    log.event(bug_id, state, thought=thought, tool=tool,
-                              result_status="blocked", result_summary=msg,
-                              tokens_in=ti, tokens_out=to, latency_ms=ms,
-                              model=MODEL)
-                    print(f"  {turn} {state} read-limit", flush=True)
-                    turn -= 1
-                    continue
-
-            if tool in ("read_file", "search_repo") and state == "COLLECT":
-                collect_reads += 1
-                if tool == "read_file" and collect_reads > COLLECT_READ_LIMIT:
-                    msg = ("BLOCKED: you've read enough with read_file. Call "
-                           "identify_bug_method now with your best-guess "
-                           "method name, or call search_repo with a specific "
-                           "term. Reading sequentially is disabled.")
-                    history.append(f"[you] tried {tool}\n[system] {msg}")
-                    log.event(bug_id, state, thought=thought, tool=tool,
-                              result_status="blocked", result_summary=msg,
-                              tokens_in=ti, tokens_out=to, latency_ms=ms,
-                              model=MODEL)
-                    print(f"  {turn} {state} collect-read-limit", flush=True)
-                    turn -= 1
-                    continue
-            if tool not in ALLOWED[state]:
-                msg = (f"'{tool}' is not allowed in {state}. "
-                       f"Allowed: {', '.join(sorted(ALLOWED[state]))}")
-                history.append(f"[you] {tool}\n[system] {msg}")
-                log.event(bug_id, state, thought=thought, tool=tool, args=args,
-                          result_status="blocked", result_summary=msg,
-                          tokens_in=ti, tokens_out=to, latency_ms=ms, model=MODEL)
-                print(f"  {turn} {state} blocked {tool}", flush=True)
-                continue
-
-            res = disp.call(tool, args)
-            if tool == "apply_edit" and res.status == "ok":
-                attempts += 1
-                reads_since_edit = 0
-            elif tool == "run_tests":
-                reads_since_edit = 0
-
-            reread_path = None
-            if tool == "read_file":
-                reread_path = args.get("path")
-                if reread_path:
-                    files_read[reread_path] = files_read.get(reread_path, 0) + 1
-
-            if state == "COLLECT":
-                if tool == "search_repo":
-                    collect_last_search_pattern = args.get("pattern")
-                elif tool == "read_file" and reread_path:
-                    if "/test/" not in reread_path and not reread_path.endswith("Test.java"):
-                        collect_last_read_path = reread_path
-
-            log.event(bug_id, state, thought=thought, tool=tool,
-                      args={k: str(v)[:200] for k, v in args.items()},
-                      result_status=res.status,
-                      result_summary=res.output[:300],
-                      tokens_in=ti, tokens_out=to, latency_ms=ms, model=MODEL)
-            print(f"  {turn} {state:10s} {tool:16s} {res.status}", flush=True)
-
-            history.append(f"[you] {thought}\n[action] {tool} {json.dumps(args)[:300]}\n"
-                           f"[result:{res.status}] {res.output[:1200]}")
-            if tool == "apply_edit" and res.status == "ok":
-                history.append("[system] Edit applied. You MUST call run_tests "
-                               "as your very next action before doing anything else.")
-            if reread_path and files_read.get(reread_path, 0) >= 2:
-                history.append(f"[system] You already read {reread_path}. Now read "
-                               "the SOURCE file (not the test file) where the buggy "
-                               "method is defined.")
-
-            if tool == "finish":
-                t = d4j.run_tests(wd)
-                outcome = "PLAUSIBLE" if t.passed else "FAILED"
-                break
-            if tool == "escalate" and attempts < 2:
-                history.append("[system] REJECTED: fewer than 2 fix attempts made. Try a different edit first.")
-                print(f"  {turn} {state} escalate-too-early", flush=True)
-                state = "TRY_FIX"
-                reads_since_edit = 0
-                continue
-            if tool == "escalate":
-                outcome = "ESCALATED"
-                escalation = res.output
-                break
-
-            state = next_state(state, tool, res, attempts)
-            if state == "ESCALATE":
-                outcome = "ESCALATED"
-                break
-        else:
-            outcome = "TIMEOUT"
-
-        if outcome in ("FAILED", "TIMEOUT"):
-            t = d4j.run_tests(wd)
-            if t.passed:
-                outcome = "PLAUSIBLE"
+        outcome, escalation, attempts = run_fsm_core(
+            disp, ctx, hint_file, log, bug_id, d4j)
 
         s = log.summary(bug_id, outcome, model=MODEL,
                         edits_applied=len(disp.edits),

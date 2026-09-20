@@ -92,12 +92,23 @@ class Dispatcher:
     """Executes a tool call against one bug's workspace."""
 
     def __init__(self, workdir, log=None, bug_id=None, trigger_class=None,
-                 hint_file=None):
+                 hint_file=None, env=None, source_glob="*.java",
+                 test_file_suffixes=("Test.java",)):
         self.workdir = str(workdir)
         self.log = log
         self.bug_id = bug_id
         self.trigger_class = trigger_class
         self.hint_file = hint_file
+        # env supplies compile_project(workdir) and run_tests(workdir,
+        # timeout=..., test_class=None) -> TestResult. Defaults to the
+        # Defects4j backend so every existing caller keeps working
+        # unchanged; repairlam/github injects a generic git+shell backend.
+        self.env = env if env is not None else d4j
+        # source_glob/test_file_suffixes default to the Java/Defects4j
+        # shape; repairlam/github overrides both per-repo since a live
+        # repo can be in any language.
+        self.source_glob = source_glob
+        self.test_file_suffixes = tuple(test_file_suffixes)
         self.last_test = None
         self.edits = []
         self.reads = []   # [{"path": str, "start": int, "lines": [str, ...]}]
@@ -116,7 +127,7 @@ class Dispatcher:
 
     def _get_test_output(self, a):
         if self.last_test is None:
-            self.last_test = d4j.run_tests(self.workdir)
+            self.last_test = self.env.run_tests(self.workdir)
         t = self.last_test
         if t.passed:
             return ToolResult("ok", "All tests pass.")
@@ -174,8 +185,13 @@ class Dispatcher:
 
     def _search_repo(self, a):
         return ToolResult("ok", search_repo(self.workdir, a["pattern"],
+                                            glob=self.source_glob,
                                             hint_file=self.hint_file))
 
+    # Java declaration syntax specifically (keyword modifiers before the
+    # name). repairlam/github currently only targets Java repos for the
+    # same reason -- generalizing this to other languages' declaration
+    # syntax is follow-up work, not yet done.
     _DECL_TEMPLATE = (r"(?:public|private|protected|static|final|abstract|"
                        r"synchronized)\b[^;{{}}]*\b{name}\s*\(")
 
@@ -188,7 +204,7 @@ class Dispatcher:
                               "sentence, path, or signature.")
         pat = re.compile(self._DECL_TEMPLATE.format(name=re.escape(name)))
         found = []
-        for f in Path(self.workdir).rglob("*.java"):
+        for f in Path(self.workdir).rglob(self.source_glob):
             s = str(f)
             if "/test/" in s or "/build/" in s or "/target/" in s or "/classes/" in s:
                 continue
@@ -237,7 +253,7 @@ class Dispatcher:
         return candidate, self._identify_bug_method({"method_name": candidate})
 
     def _apply_edit(self, a):
-        if "/test/" in a["path"] or a["path"].endswith("Test.java"):
+        if "/test/" in a["path"] or a["path"].endswith(self.test_file_suffixes):
             return ToolResult("rejected",
                               "editing test files is not allowed; fix the "
                               "source code instead")
@@ -257,11 +273,11 @@ class Dispatcher:
         return ToolResult("ok", r.message)
 
     def _run_tests(self, a):
-        ok, out = d4j.compile_project(self.workdir)
+        ok, out = self.env.compile_project(self.workdir)
         if not ok:
             self.last_test = None
             return ToolResult("ok", f"COMPILE FAILED\n{truncate_trace(out)}")
-        t = d4j.run_tests(self.workdir, timeout=180, test_class=self.trigger_class)
+        t = self.env.run_tests(self.workdir, timeout=180, test_class=self.trigger_class)
         self.last_test = t
         if t.passed:
             msg = ("TRIGGER TEST PASSES (only the failing test class was run; "
