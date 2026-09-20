@@ -12,7 +12,9 @@ is responsible for making sure a failing test exists before the FSM starts
 """
 import os
 import signal
+import stat
 import subprocess
+import tempfile
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -25,12 +27,18 @@ class TestResult:
     raw: str
 
 
-def _run(cmd, cwd=None, timeout=600):
+def _run(cmd, cwd=None, timeout=600, extra_env=None):
     """Same safety property as repairlam.env.d4j._run: kill the whole
-    process group on timeout so no orphaned child survives."""
+    process group on timeout so no orphaned child survives. `extra_env`,
+    if given, is merged on top of the current environment for this one
+    call -- used to set GIT_ASKPASS/GIT_TERMINAL_PROMPT for git commands
+    that need credentials, without ever putting a secret in `cmd` itself
+    (which would be visible via `ps`, this function's own error paths, or
+    a caller that logs `cmd`)."""
+    run_env = {**os.environ, **extra_env} if extra_env else None
     p = subprocess.Popen(cmd, cwd=cwd, stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE, text=True,
-                         start_new_session=True)
+                         start_new_session=True, env=run_env)
     try:
         out, err = p.communicate(timeout=timeout)
         return p.returncode, out, err
@@ -44,6 +52,40 @@ def _run(cmd, cwd=None, timeout=600):
         except Exception:
             out, err = "", ""
         return -1, out, f"TIMEOUT after {timeout}s\n{err}"
+
+
+_ASKPASS_SCRIPT = """#!/bin/sh
+# git calls this once for the username prompt and once for the password
+# prompt (the prompt text is $1). It reads the token from ITS OWN process
+# environment at the moment git invokes it -- the token never appears in
+# argv, a URL, or this script's own contents, so it can't leak via `ps`,
+# git's error/diagnostic output, or shell history the way an
+# embedded-token clone URL does.
+case "$1" in
+    Username*) echo "x-access-token" ;;
+    *) echo "$GITHUB_TOKEN" ;;
+esac
+"""
+
+
+def _askpass_helper_path():
+    """Writes (once per user) a small, non-secret helper script and
+    returns its path, for use as GIT_ASKPASS. The script itself contains
+    no credential -- only a reference to the GITHUB_TOKEN env var name --
+    so leaving it on disk is safe."""
+    path = Path(tempfile.gettempdir()) / f"repairlam_askpass_{os.getuid()}.sh"
+    if not path.exists():
+        path.write_text(_ASKPASS_SCRIPT)
+        path.chmod(stat.S_IRWXU)  # 0700: only this user can read/execute it
+    return str(path)
+
+
+def git_auth_env():
+    """Environment overrides that make `git clone`/`git push` authenticate
+    over HTTPS using $GITHUB_TOKEN from the calling process's own
+    environment, via GIT_ASKPASS -- no token embedded in any URL. Pass as
+    `extra_env` to `_run` for any git command that touches the network."""
+    return {"GIT_ASKPASS": _askpass_helper_path(), "GIT_TERMINAL_PROMPT": "0"}
 
 
 _PYTEST_FAIL_RE = re.compile(r"^FAILED (\S+)", re.M)
@@ -88,14 +130,16 @@ class RepoEnv:
 
     def clone_and_branch(self, clone_url, base_branch, new_branch, workdir,
                          timeout=300) -> bool:
-        """Clone `clone_url` (an https URL, may already have a token
-        embedded by the caller -- never logged here) at `base_branch` into
-        `workdir`, then create and check out `new_branch` from it."""
+        """Clone `clone_url` (a plain https URL, no embedded credential --
+        auth happens via GIT_ASKPASS reading $GITHUB_TOKEN, see
+        git_auth_env()) at `base_branch` into `workdir`, then create and
+        check out `new_branch` from it."""
         if Path(workdir).exists():
             import shutil
             shutil.rmtree(workdir)
         rc, out, err = _run(["git", "clone", "--depth", "1", "--branch",
-                             base_branch, clone_url, workdir], timeout=timeout)
+                             base_branch, clone_url, workdir], timeout=timeout,
+                            extra_env=git_auth_env())
         if rc != 0:
             return False
         rc, out, err = _run(["git", "checkout", "-b", new_branch],
@@ -124,7 +168,6 @@ class RepoEnv:
 
     def commit_and_push(self, workdir, branch, message, author_name=None,
                         author_email=None, timeout=60) -> bool:
-        env_kwargs = {}
         _run(["git", "add", "-A"], cwd=workdir, timeout=timeout)
         cmd = ["git"]
         if author_name and author_email:
@@ -135,7 +178,7 @@ class RepoEnv:
         if rc != 0:
             return False
         rc, out, err = _run(["git", "push", "-u", "origin", branch],
-                            cwd=workdir, timeout=timeout)
+                            cwd=workdir, timeout=timeout, extra_env=git_auth_env())
         return rc == 0
 
     def cleanup(self, workdir):

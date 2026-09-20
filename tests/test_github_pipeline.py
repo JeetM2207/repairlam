@@ -63,7 +63,7 @@ class FakeGithubClient:
                                  "head": head_branch, "base": base_branch})
         return FakePR()
 
-    def authenticated_clone_url(self, repo_full_name):
+    def clone_url(self, repo_full_name):
         return str(self._seed_path)
 
 

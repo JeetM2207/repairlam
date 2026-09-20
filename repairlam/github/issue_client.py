@@ -21,9 +21,8 @@ class GithubClient:
     without the dependency installed."""
 
     def __init__(self, token):
-        from github import Github  # PyGithub
-        self._gh = Github(token)
-        self._token = token
+        from github import Github, Auth  # PyGithub
+        self._gh = Github(auth=Auth.Token(token))
 
     def get_repo(self, repo_full_name):
         return self._gh.get_repo(repo_full_name)
@@ -45,10 +44,11 @@ class GithubClient:
         return repo.create_pull(title=title, body=body, head=head_branch,
                                 base=base_branch)
 
-    def authenticated_clone_url(self, repo_full_name):
-        """https URL with the token embedded, for `git clone`/`git push`
-        without an interactive credential prompt. Never print this --
-        it contains the token."""
-        repo = self.get_repo(repo_full_name)
-        url = repo.clone_url  # "https://github.com/owner/name.git"
-        return url.replace("https://", f"https://x-access-token:{self._token}@")
+    def clone_url(self, repo_full_name):
+        """Plain https clone URL, no credential embedded. Authentication
+        for git clone/push happens separately via GIT_ASKPASS (see
+        repairlam.github.repo_env.git_auth_env) reading $GITHUB_TOKEN from
+        the environment at call time -- never via a URL, so it can't leak
+        through git's own error/diagnostic output the way an
+        embedded-token URL can."""
+        return self.get_repo(repo_full_name).clone_url

@@ -79,7 +79,7 @@ def run_on_issue(repo_full_name, issue_number, token, test_cmd,
     `client`, if given, is used instead of constructing a real
     GithubClient(token) -- lets tests inject a fake/mock client (any
     object exposing get_issue/post_comment/create_pull_request/
-    authenticated_clone_url) without a real token or network access.
+    clone_url) without a real token or network access.
     """
     client = client if client is not None else (GithubClient(token) if token else None)
     if client is None:
@@ -98,7 +98,7 @@ def run_on_issue(repo_full_name, issue_number, token, test_cmd,
     print(f"\n=== {bug_id} ===", flush=True)
 
     try:
-        clone_url = client.authenticated_clone_url(repo_full_name)
+        clone_url = client.clone_url(repo_full_name)
         if not env.clone_and_branch(clone_url, base_branch, branch, workdir):
             log.summary(bug_id, "ERROR", model=MODEL, note="clone/branch failed")
             return {"outcome": "ERROR", "note": "clone/branch failed"}
