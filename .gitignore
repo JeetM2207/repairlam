@@ -1,4 +1,5 @@
 workspaces/
+github_workspaces/
 logs/*.jsonl
 __pycache__/
 *.pyc

@@ -38,6 +38,41 @@ class GithubClient:
         issue = repo.get_issue(issue_number)
         return issue.create_comment(body)
 
+    def create_issue(self, repo_full_name, title, body) -> Issue:
+        repo = self.get_repo(repo_full_name)
+        issue = repo.create_issue(title=title, body=body)
+        return Issue(number=issue.number, title=issue.title or "",
+                    body=issue.body or "", url=issue.html_url)
+
+    def ensure_fork(self, source_repo_full_name):
+        """Idempotent: returns the full_name of the authenticated user's
+        fork of `source_repo_full_name`, creating it first if it doesn't
+        already exist."""
+        me = self._gh.get_user()
+        owner, name = source_repo_full_name.split("/")
+        target = f"{me.login}/{name}"
+        try:
+            self._gh.get_repo(target)
+            return target
+        except Exception:
+            pass
+        src = self.get_repo(source_repo_full_name)
+        me.create_fork(src)
+        import time
+        for _ in range(30):
+            try:
+                self._gh.get_repo(target)
+                return target
+            except Exception:
+                time.sleep(2)
+        raise RuntimeError(f"fork of {source_repo_full_name} did not "
+                           f"become available in time")
+
+    def ensure_issues_enabled(self, repo_full_name):
+        repo = self.get_repo(repo_full_name)
+        if not repo.has_issues:
+            repo.edit(has_issues=True)
+
     def create_pull_request(self, repo_full_name, head_branch, base_branch,
                             title, body):
         repo = self.get_repo(repo_full_name)
