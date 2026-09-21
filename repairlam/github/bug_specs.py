@@ -1018,3 +1018,131 @@ public class NonIntegralGetAsInt996Test {
         test_cmd=_gson_cmd("NonIntegralGetAsInt996Test"),
     ),
 ]
+
+
+def _netty_cmd(klass):
+    return ["mvn", "-q", "-pl", "codec-http", "-am", f"-Dtest={klass}",
+            MAVEN_NO_FAIL_IF_NO_TESTS, "test"]
+
+
+# Third wave: guava's and gson's easy, deterministic, single-method-bug pools
+# are now largely mined out (checked ~360 issues across both this session).
+# netty/vert.x/dubbo skew heavily toward concurrency- and networking-timing
+# bugs unsuited to a deterministic single-shot regression test; mockito/
+# moshi/spring-framework/elasticsearch are Gradle-based, and this cluster has
+# no outbound network access to fetch the Gradle wrapper distribution at all
+# (confirmed via a direct `./gradlew --version` failure on mockito) -- a hard
+# infra blocker, not just added risk. h2database uses a bespoke build tool
+# (no pom.xml or build.gradle). Landed on 2 new, individually-verified
+# candidates for this wave.
+SPECS += [
+    BugSpec(
+        key="guava#3553",
+        source_repo="google/guava",
+        source_issue_number=3553,
+        base_branch="master",
+        new_test_file="guava-tests/test/com/google/common/util/concurrent/"
+                      "ListeningDecoratorCancelOnTermination3553Test.java",
+        new_test_file_content="""\
+package com.google.common.util.concurrent;
+
+import static com.google.common.util.concurrent.MoreExecutors.listeningDecorator;
+import static java.util.concurrent.Executors.newScheduledThreadPool;
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
+import org.junit.Test;
+
+// https://github.com/google/guava/issues/3553: a ListenableFuture returned by
+// MoreExecutors#listeningDecorator's scheduleAtFixedRate never completes once the
+// underlying ScheduledExecutorService is shut down -- unlike the same future wrapped via
+// JdkFutureAdapters#listenInPoolThread, which correctly transitions to cancelled. The
+// decorator's NeverSuccessfulListenableFutureTask apparently never fails/cancels either.
+public class ListeningDecoratorCancelOnTermination3553Test {
+  private static final Runnable DO_NOTHING = () -> {};
+
+  @Test
+  public void testScheduledExecutorServiceWithListeningDecoratorCancelsOnTermination()
+      throws InterruptedException, TimeoutException, ExecutionException {
+    ListeningScheduledExecutorService service = listeningDecorator(newScheduledThreadPool(1));
+    ListenableFuture<?> future = service.scheduleAtFixedRate(DO_NOTHING, 0L, 1, SECONDS);
+
+    assertFalse(future.isDone());
+
+    service.shutdown();
+    service.awaitTermination(5, SECONDS);
+    service.shutdownNow();
+
+    try {
+      future.get(10, SECONDS);
+      fail("Expected to throw an exception.");
+    } catch (CancellationException ignored) {
+      // expected
+    }
+
+    assertTrue(future.isCancelled());
+  }
+}
+""",
+        test_cmd=_guava_cmd("ListeningDecoratorCancelOnTermination3553Test"),
+    ),
+    BugSpec(
+        key="netty#4514",
+        source_repo="netty/netty",
+        source_issue_number=4514,
+        base_branch="4.2",
+        new_test_file="codec-http/src/test/java/io/netty/handler/codec/http/"
+                      "FullHttpMessageEqualsHashCodeRefCnt4514Test.java",
+        new_test_file_content="""\
+/*
+ * Copyright 2026 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+package io.netty.handler.codec.http;
+
+import io.netty.buffer.Unpooled;
+import io.netty.util.CharsetUtil;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+// https://github.com/netty/netty/issues/4514: FullHttp[Request|Response].hashCode()
+// tolerates the content's reference count being 0 (skips hashing the released content),
+// but equals() makes no such allowance and still tries to compare the released content --
+// so two messages that hashCode() would put in the same bucket can disagree via equals()
+// once their content is released, violating the hashCode/equals contract.
+public class FullHttpMessageEqualsHashCodeRefCnt4514Test {
+  @Test
+  public void testHashCodeEqualsConsistentAfterContentReleased() {
+    DefaultFullHttpRequest a = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
+        "/", Unpooled.copiedBuffer("test", CharsetUtil.UTF_8));
+    DefaultFullHttpRequest b = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
+        "/", Unpooled.copiedBuffer("test", CharsetUtil.UTF_8));
+    a.content().release();
+    b.content().release();
+
+    boolean hashEqual = a.hashCode() == b.hashCode();
+    boolean objEqual = a.equals(b);
+    assertEquals(hashEqual, objEqual);
+  }
+}
+""",
+        test_cmd=_netty_cmd("FullHttpMessageEqualsHashCodeRefCnt4514Test"),
+    ),
+]
