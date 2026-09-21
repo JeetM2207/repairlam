@@ -163,11 +163,19 @@ class Dispatcher:
     def _closest_match(self, find):
         """Fuzzy-match `find` against every line window seen via read_file
         this run. Returns a real snippet (path + line) to show the model,
-        or None if nothing was ever read."""
+        or None if nothing was ever read. This only ever fires from
+        _apply_edit after that method has already rejected an edit to a
+        test file, so a test-file read must never end up as the suggestion
+        here -- that previously misled the model into re-attempting the
+        edit against the (also-rejected) test file instead of finding the
+        real anchor in the source file it's actually supposed to be
+        editing (see guava#3790's re-run)."""
         find_lines = find.splitlines() or [find]
         k = len(find_lines)
         candidates = []   # (window_text, path, line_no)
         for r in self.reads:
+            if "/test/" in r["path"] or r["path"].endswith(self.test_file_suffixes):
+                continue
             lines = r["lines"]
             for i in range(max(1, len(lines) - k + 1)):
                 window = lines[i:i + k]
