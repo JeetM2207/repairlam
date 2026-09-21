@@ -36,7 +36,7 @@ def _run_search(workdir, rx, glob, priority_path=None):
     hits = []
     src = Path(workdir)
     files = sorted(src.rglob(glob),
-                   key=lambda f: ("/test/" in str(f), str(f)))
+                   key=lambda f: ("/android/" in str(f), "/test/" in str(f), str(f)))
     if priority_path:
         pf = src / priority_path
         if pf in files:

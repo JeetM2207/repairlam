@@ -123,7 +123,14 @@ def _seed_and_verify(client, spec: BugSpec, fork_full, workdir: Path):
 
 
 def _push_to_base(workdir: Path, base_branch: str, message: str):
+    """Idempotent: a re-run against a bug whose regression test was already
+    committed to base_branch by an earlier attempt has nothing new to stage
+    -- that's success (the desired state already holds), not an error."""
     _run(["git", "add", "-A"], cwd=str(workdir), timeout=60)
+    rc, out, err = _run(["git", "status", "--porcelain", "--cached"],
+                        cwd=str(workdir), timeout=30)
+    if not out.strip():
+        return
     rc, out, err = _run(["git", "-c", "user.name=repairlam-bot",
                          "-c", "user.email=repairlam-bot@users.noreply.github.com",
                          "commit", "-m", message], cwd=str(workdir), timeout=60)
@@ -196,12 +203,17 @@ def run_bug_spec(spec: BugSpec, token: str) -> dict:
         return _append_result(entry)["runs"][-1]
 
 
-def main(specs, token):
+def main(specs, token, force_keys=None):
     """Runs every BugSpec in `specs` not already present with a non-ERROR
     outcome in results/live_run_log.json, one at a time, logging as it
-    goes. Safe to interrupt and re-invoke with the same `specs` list."""
+    goes. Safe to interrupt and re-invoke with the same `specs` list.
+
+    `force_keys`, if given, is a set of spec keys to re-run unconditionally
+    (overwriting their prior log entry) even though already logged -- for
+    correcting results that a fixed infrastructure bug invalidated."""
+    force_keys = force_keys or set()
     for spec in specs:
-        if _already_done(spec.key):
+        if spec.key not in force_keys and _already_done(spec.key):
             print(f"skip (already logged): {spec.key}", flush=True)
             continue
         run_bug_spec(spec, token)
@@ -216,6 +228,10 @@ def main(specs, token):
 
 if __name__ == "__main__":
     import os
+    import sys
     from repairlam.github.bug_specs import SPECS
     token = os.environ["GITHUB_TOKEN"]
-    main(SPECS, token)
+    # optional: force-rerun specific keys, e.g.
+    #   python -m repairlam.github.live_bug_pipeline gson#600 guava#3790
+    force = set(sys.argv[1:]) if len(sys.argv) > 1 else None
+    main(SPECS, token, force_keys=force)

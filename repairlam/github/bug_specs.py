@@ -69,8 +69,13 @@ SPECS = [
             "    assertThat(jsonTree.getAsNumber()).isInstanceOf(Integer.class);\n"
             "  }"
         ),
-        test_cmd=["mvn", "-q", "-pl", "gson", "-am", "-Dtest=JsonTreeTest",
-                  MAVEN_NO_FAIL_IF_NO_TESTS, "test"],
+        # gson needs JDK 17+ (maven-enforcer-plugin); see _JDK21_HOME below --
+        # this spec predates that helper, so the override is inlined here.
+        test_cmd=["env", "JAVA_HOME=/home/23ucs603/miniconda3/envs/jdk21tools",
+                  "PATH=/home/23ucs603/miniconda3/envs/jdk21tools/bin:"
+                  "/home/23ucs603/miniconda3/envs/repairlam/bin:/usr/bin:/bin",
+                  "/home/23ucs603/miniconda3/envs/repairlam/bin/mvn", "-q", "-pl", "gson",
+                  "-am", "-Dtest=JsonTreeTest", MAVEN_NO_FAIL_IF_NO_TESTS, "test"],
     ),
     BugSpec(
         key="jackson-databind#3067",
@@ -117,8 +122,22 @@ SPECS = [
 ]
 
 
+# gson's parent pom enforces JDK 17-26 via maven-enforcer-plugin, but
+# repairlam.env.d4j hardcodes JAVA_HOME to the shared `repairlam` conda env,
+# which Defects4J requires to stay on JDK 11 -- so gson gets its own,
+# separate JDK 21 install (`conda create -n jdk21tools -c conda-forge
+# openjdk=21`) and its test_cmd overrides JAVA_HOME/PATH just for this one
+# subprocess via `env` (not a login shell, which resets PATH from profile
+# scripts and drops `mvn`), never touching the ambient environment other
+# bugs run under.
+_JDK21_HOME = "/home/23ucs603/miniconda3/envs/jdk21tools"
+_MVN = "/home/23ucs603/miniconda3/envs/repairlam/bin/mvn"
+
+
 def _gson_cmd(klass):
-    return ["mvn", "-q", "-pl", "gson", "-am", f"-Dtest={klass}",
+    return ["env", f"JAVA_HOME={_JDK21_HOME}",
+            f"PATH={_JDK21_HOME}/bin:/home/23ucs603/miniconda3/envs/repairlam/bin:/usr/bin:/bin",
+            _MVN, "-q", "-pl", "gson", "-am", f"-Dtest={klass}",
             MAVEN_NO_FAIL_IF_NO_TESTS, "test"]
 
 
@@ -257,6 +276,7 @@ import org.junit.Test;
 // field still collides with the subclass field and fromJson() throws.
 public class ExclusionStrategyFieldConflict2348Test {
   public static class BaseClass {
+    @SuppressWarnings("unused")
     @SerializedName("data")
     private Object data = null;
   }
@@ -272,7 +292,7 @@ public class ExclusionStrategyFieldConflict2348Test {
     builder.addDeserializationExclusionStrategy(new ExclusionStrategy() {
       @Override
       public boolean shouldSkipField(FieldAttributes f) {
-        return "data".equals(f.getName()) && Object.class.equals(f.getDeclaringClass());
+        return f.getName().equals("data") && Object.class.equals(f.getDeclaringClass());
       }
 
       @Override
@@ -387,7 +407,8 @@ public class IntOverflowFromJsonObject1994Test {
   public void testFromJsonObjectRejectsLongOverflowingInt() {
     JsonObject jsonObject = new JsonObject();
     jsonObject.addProperty("foo", 10000000000L);
-    assertThrows(RuntimeException.class, () -> new Gson().fromJson(jsonObject, HasIntField.class));
+    Gson gson = new Gson();
+    assertThrows(RuntimeException.class, () -> gson.fromJson(jsonObject, HasIntField.class));
   }
 }
 """,
@@ -446,6 +467,8 @@ public class JsonWriterNaNWritesName1736Test {
         new_test_file_content="""\
 package com.google.gson.functional;
 
+import static org.junit.Assert.assertEquals;
+
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.MalformedJsonException;
 import java.io.IOException;
@@ -463,13 +486,14 @@ public class JsonReaderPeekAdvances1735Test {
     reader.beginArray();
     for (int i = 0; i < 4; i++) {
       try {
-        reader.peek();
+        var unused = reader.peek();
       } catch (MalformedJsonException expected) {
         // expected
       }
     }
-    reader.nextInt();
+    int value = reader.nextInt();
     reader.endArray();
+    assertEquals(1, value);
   }
 }
 """,
@@ -486,6 +510,7 @@ package com.google.gson.internal.bind.util;
 
 import static org.junit.Assert.assertEquals;
 
+import java.text.ParseException;
 import java.text.ParsePosition;
 import java.time.Instant;
 import java.util.Date;
@@ -513,7 +538,7 @@ public class Iso8601LocalTimezone1511Test {
   }
 
   @Test
-  public void testDateOnlyParseIsTimezoneIndependent() {
+  public void testDateOnlyParseIsTimezoneIndependent() throws ParseException {
     Date parsed = ISO8601Utils.parse("2019-03-20", new ParsePosition(0));
     assertEquals(Instant.parse("2019-03-20T00:00:00Z"), parsed.toInstant());
   }
@@ -567,6 +592,7 @@ package com.google.gson.functional;
 
 import static org.junit.Assert.assertThrows;
 
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.junit.Test;
@@ -578,7 +604,8 @@ public class JsonElementGetAsIntOverflow630Test {
   @Test
   public void testGetAsIntThrowsOnOutOfRangeExponentialValue() {
     JsonObject jsonObj = JsonParser.parseString("{\\"id\\":1e50}").getAsJsonObject();
-    assertThrows(RuntimeException.class, () -> jsonObj.get("id").getAsInt());
+    JsonElement idElement = jsonObj.get("id");
+    assertThrows(RuntimeException.class, idElement::getAsInt);
   }
 }
 """,
@@ -603,13 +630,14 @@ import org.junit.Test;
 // while a JSON number in the same position correctly raises an error.
 public class BooleanFromArbitraryString600Test {
   public static class HasBoolean {
-    public boolean isPRA;
+    public boolean isPra;
   }
 
   @Test
   public void testBooleanFieldRejectsNonBooleanString() {
-    assertThrows(RuntimeException.class, () ->
-        new Gson().fromJson("{\\"isPRA\\":\\"ABC\\"}", HasBoolean.class));
+    Gson gson = new Gson();
+    String json = "{\\"isPra\\":\\"ABC\\"}";
+    assertThrows(RuntimeException.class, () -> gson.fromJson(json, HasBoolean.class));
   }
 }
 """,
@@ -669,6 +697,7 @@ public class SubclassOverriddenFieldSerialize2638Test {
   }
 
   public static class SubClass extends MyClass {
+    @SuppressWarnings("HidingField") // the shadowed field is exactly what this bug is about
     int a = 25;
     int b = 12;
   }
@@ -804,7 +833,7 @@ import static org.junit.Assert.assertNull;
 import com.google.gson.internal.bind.TypeAdapters;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
-import com.google.gson.stream.Strictness;
+import com.google.gson.Strictness;
 import java.io.StringReader;
 import java.io.StringWriter;
 import org.junit.Test;

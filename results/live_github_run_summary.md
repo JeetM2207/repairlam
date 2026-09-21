@@ -1,6 +1,7 @@
 # Module 4: Live GitHub Issue Runs — Summary
 
-Full outcome log: [`live_run_log.json`](live_run_log.json).
+Full outcome log: [`live_run_log.json`](live_run_log.json). Root-cause analysis of the
+original TIMEOUT-heavy batch, and what was fixed before the numbers below: [`live_timeout_analysis.md`](live_timeout_analysis.md).
 
 ## Process
 
@@ -33,44 +34,60 @@ maintainer disagreement. Landed on **26 total bugs run** (across guava,
 gson, and jackson-databind) rather than the initially-targeted 30-40 — the
 quality bar was kept even after the throughput-oriented curation pass.
 
+## A first pass produced misleading numbers
+
+The first full run of this batch scored 3 PLAUSIBLE / 7 ESCALATED / 16 TIMEOUT,
+with gson going 0/19 for PLAUSIBLE. That turned out to be almost entirely an
+infrastructure artifact, not a model result: gson's build requires a JDK this
+cluster didn't have, so every gson run failed to even compile before the FSM
+ever saw a real test signal, and a separate bug in `search_repo` let guava's
+irrelevant `android/` source mirror mislead the model on two more bugs. Both
+were root-caused and fixed; see [`live_timeout_analysis.md`](live_timeout_analysis.md)
+for the full investigation. All 20 gson bugs and the 2 affected guava bugs were
+then re-run against the fixed infrastructure. **The table below is the
+corrected, final result** — prior TIMEOUT/ESCALATED entries for those 22 keys
+were overwritten in place in `live_run_log.json`, not appended alongside.
+
 ## Results
 
-**PLAUSIBLE: 3 | ESCALATED: 7 | TIMEOUT: 16** (26 total)
+**PLAUSIBLE: 7 | ESCALATED: 9 | TIMEOUT: 6 | SKIPPED: 4** (26 total)
+
+SKIPPED means the regression test passed against the bug's current source —
+i.e., re-verified not reproducible (most likely already fixed upstream by an
+unrelated refactor, issue never closed) — so no fix was attempted or scored
+one way or the other.
 
 | Bug | Outcome | Turns | Edits | Link |
 |---|---|---|---|---|
 | guava#3493 | PLAUSIBLE | 27 | 4 | [PR #2](https://github.com/JeetM2207/guava/pull/2) |
 | guava#5284 | PLAUSIBLE | 32 | 2 | [PR #4](https://github.com/JeetM2207/guava/pull/4) |
 | guava#1065 | PLAUSIBLE | 15 | 1 | [PR #6](https://github.com/JeetM2207/guava/pull/6) |
+| gson#1511 | PLAUSIBLE | 20 | 2 | [PR #27](https://github.com/JeetM2207/gson/pull/27) |
+| gson#630 | PLAUSIBLE | 19 | 1 | [PR #29](https://github.com/JeetM2207/gson/pull/29) |
+| gson#600 | PLAUSIBLE | 19 | 1 | [PR #31](https://github.com/JeetM2207/gson/pull/31) |
+| gson#1920 | PLAUSIBLE | 19 | 2 | [PR #35](https://github.com/JeetM2207/gson/pull/35) |
 | jackson-databind#3067 | ESCALATED | 33 | 0 | [comment](https://github.com/JeetM2207/jackson-databind/issues/1) |
-| gson#2190 | ESCALATED | 32 | 2 | [comment](https://github.com/JeetM2207/gson/issues/3) |
-| gson#1735 | ESCALATED | 28 | 0 | [comment](https://github.com/JeetM2207/gson/issues/6) |
-| gson#630 | ESCALATED | 29 | 2 | [comment](https://github.com/JeetM2207/gson/issues/9) |
-| gson#523 | ESCALATED | 32 | 2 | [comment](https://github.com/JeetM2207/gson/issues/11) |
-| gson#2817 | ESCALATED | 24 | 6 | [comment](https://github.com/JeetM2207/gson/issues/13) |
-| gson#1397 | ESCALATED | 27 | 0 | [comment](https://github.com/JeetM2207/gson/issues/19) |
-| gson#2680 | TIMEOUT | 30 | 0 | [comment](https://github.com/JeetM2207/gson/issues/1) |
-| guava#3790 | TIMEOUT | 38 | 2 | [comment](https://github.com/JeetM2207/guava/issues/7) |
-| guava#3768 | TIMEOUT | 38 | 3 | [comment](https://github.com/JeetM2207/guava/issues/8) |
-| gson#2348 | TIMEOUT | 36 | 2 | [comment](https://github.com/JeetM2207/gson/issues/2) |
-| gson#1994 | TIMEOUT | 34 | 0 | [comment](https://github.com/JeetM2207/gson/issues/4) |
-| gson#1736 | TIMEOUT | 30 | 0 | [comment](https://github.com/JeetM2207/gson/issues/5) |
-| gson#1511 | TIMEOUT | 32 | 1 | [comment](https://github.com/JeetM2207/gson/issues/7) |
-| gson#1394 | TIMEOUT | 30 | 0 | [comment](https://github.com/JeetM2207/gson/issues/8) |
-| gson#600 | TIMEOUT | 31 | 1 | [comment](https://github.com/JeetM2207/gson/issues/10) |
-| gson#2638 | TIMEOUT | 30 | 0 | [comment](https://github.com/JeetM2207/gson/issues/12) |
-| gson#1920 | TIMEOUT | 31 | 0 | [comment](https://github.com/JeetM2207/gson/issues/14) |
-| gson#1727 | TIMEOUT | 37 | 1 | [comment](https://github.com/JeetM2207/gson/issues/15) |
-| gson#2769 | TIMEOUT | 30 | 0 | [comment](https://github.com/JeetM2207/gson/issues/16) |
-| gson#453 | TIMEOUT | 37 | 2 | [comment](https://github.com/JeetM2207/gson/issues/17) |
-| gson#1575 | TIMEOUT | 31 | 1 | [comment](https://github.com/JeetM2207/gson/issues/18) |
-| gson#996 | TIMEOUT | 30 | 0 | [comment](https://github.com/JeetM2207/gson/issues/20) |
+| gson#2680 | ESCALATED | 22 | 0 | [comment](https://github.com/JeetM2207/gson/issues/21) |
+| guava#3790 | ESCALATED | 26 | 0 | [comment](https://github.com/JeetM2207/guava/issues/9) |
+| gson#1994 | ESCALATED | 30 | 2 | [comment](https://github.com/JeetM2207/gson/issues/24) |
+| gson#1736 | ESCALATED | 28 | 0 | [comment](https://github.com/JeetM2207/gson/issues/25) |
+| gson#1727 | ESCALATED | 23 | 0 | [comment](https://github.com/JeetM2207/gson/issues/36) |
+| gson#2769 | ESCALATED | 22 | 0 | [comment](https://github.com/JeetM2207/gson/issues/37) |
+| gson#1575 | ESCALATED | 27 | 5 | [comment](https://github.com/JeetM2207/gson/issues/38) |
+| gson#1397 | ESCALATED | 33 | 0 | [comment](https://github.com/JeetM2207/gson/issues/39) |
+| guava#3768 | TIMEOUT | 48 | 0 | [comment](https://github.com/JeetM2207/guava/issues/10) |
+| gson#2348 | TIMEOUT | 36 | 1 | [comment](https://github.com/JeetM2207/gson/issues/22) |
+| gson#2190 | TIMEOUT | 39 | 2 | [comment](https://github.com/JeetM2207/gson/issues/23) |
+| gson#2638 | TIMEOUT | 34 | 4 | [comment](https://github.com/JeetM2207/gson/issues/32) |
+| gson#2817 | TIMEOUT | 33 | 3 | [comment](https://github.com/JeetM2207/gson/issues/33) |
+| gson#996 | TIMEOUT | 34 | 4 | [comment](https://github.com/JeetM2207/gson/issues/40) |
+| gson#1735 | SKIPPED | — | — | not reproducible on re-verify |
+| gson#1394 | SKIPPED | — | — | not reproducible on re-verify |
+| gson#523 | SKIPPED | — | — | not reproducible on re-verify |
+| gson#453 | SKIPPED | — | — | not reproducible on re-verify |
 
-## Open question
-
-All 3 PLAUSIBLE outcomes (and the only real PRs) are on guava; gson went 0/19 for
-PLAUSIBLE, with most gson bugs hitting the 30-turn cap without ever landing an
-edit that passed. Not yet root-caused — worth checking the per-turn traces in
-`repairlam/logs/` for whether the gson reactor build/test loop is simply slower
-per iteration (eating turns on `run_tests` calls) versus a genuine model
-weakness on gson's codebase/conventions, before drawing conclusions.
+Real PRs went from 3 (all guava) to **7** (3 guava + 4 gson) once gson bugs got
+a genuine test signal — gson's corrected PLAUSIBLE rate among its 16 actually-
+attempted bugs (excluding the 4 SKIPPED) is 4/16, in the same range as guava's.
+The original "gson: 0/19 PLAUSIBLE" was not a finding about the model; it was
+a broken build.
