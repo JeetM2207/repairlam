@@ -51,7 +51,7 @@ transferred to an unfamiliar GitHub org since prior knowledge of them.
 
 ## Results to date: 28 bugs run (3 batches, across guava, gson, jackson-databind, netty)
 
-**7 PLAUSIBLE (real PRs) / 9 ESCALATED / 7 TIMEOUT / 4 SKIPPED (not reproducible on
+**7 PLAUSIBLE (real PRs) / 10 ESCALATED / 6 TIMEOUT / 4 SKIPPED (not reproducible on
 re-verify) / 1 ERROR** (a curation mistake, see below). Full table:
 [`live_github_run_summary.md`](live_github_run_summary.md).
 
@@ -83,20 +83,31 @@ from 3 to 7.
   a real model question, and the bug's "correct fix" turned out to be genuinely unresolved
   even among guava's own maintainers (checked the real upstream thread). It should have been
   excluded from curation on the same no-confirmed-fix ground used elsewhere and is no longer
-  treated as a fair PLAUSIBLE/ESCALATED/TIMEOUT data point. A real, fixable tooling gap was
-  found along the way: `_closest_match()`'s fuzzy suggestion pointed the model at the
-  regression test file, which it misread as permission to edit it (rejected, twice) — not yet
-  fixed, unlike the two infra bugs above.
+  treated as a fair PLAUSIBLE/ESCALATED/TIMEOUT data point. The real, fixable tooling gap
+  found along the way — `_closest_match()`'s fuzzy suggestion pointing the model at the
+  regression test file, which it misread as permission to edit it (rejected, twice) — **is
+  now fixed**: `_closest_match()` excludes test-file reads from its candidate pool the same
+  way `_apply_edit` already refuses to edit them (`repairlam/tools/registry.py`).
 - A third curation wave landed only 2 new bugs (`guava#3553`, `netty#4514`) — guava/gson's
   easy pool was genuinely exhausted after ~360 issues checked total, and Gradle-based repos
   (mockito, moshi, spring-framework, elasticsearch) turned out to be a hard infra blocker: no
   outbound network access on this cluster to fetch the Gradle wrapper distribution at all.
   `guava#3553` repeated the `guava#3790` mistake — a timing-dependent bug that should have
   been excluded, and it errored out on a real flake rather than producing a fair result.
-  `netty#4514` is a more informative TIMEOUT: the model correctly identified the true
-  root-cause method (`AbstractByteBuf.equals()`) by turn 28 of 35, then ran out of budget
-  chasing a wrong lead instead — plausibly turn-limited on first exposure to a much larger,
-  unfamiliar codebase, rather than a pure reasoning gap.
+- `netty#4514` originally TIMED OUT (35 turns, 0 edits, still searching when its budget ran
+  out) — the one TIMEOUT in this whole investigation that looked plausibly turn-limited rather
+  than reasoning-limited, so that hypothesis was tested directly: re-run alone with
+  `MAX_TURNS` raised from 30 to 50 (a one-off monkeypatch scoped to this single invocation;
+  the committed default stays 30 everywhere else). Result: **ESCALATED at 36 turns** — it
+  stopped well short of the raised cap, having found the correct file
+  (`DefaultFullHttpRequest.equals()`, correcting this document's earlier guess of
+  `AbstractByteBuf`) and a reasonable fix direction (2 real edits). But every `run_tests` call
+  hit a third, separate infrastructure issue — a netty native-code Maven build step failing
+  for reasons not yet root-caused — which the model's own escalation correctly identified as
+  unrelated to its code rather than getting confused by it. Turn budget was a real factor (0
+  edits → 2 real edits at the right location), but neither run ever got a genuine pass/fail
+  signal on the model's actual fix, so this can't be scored as "would have converged" — only
+  as "got meaningfully further." Not yet fixed; flagged as follow-up work.
 
-**Final tally across all three waves: 28 bugs run — 7 PLAUSIBLE / 9 ESCALATED / 7 TIMEOUT /
+**Final tally across all three waves: 28 bugs run — 7 PLAUSIBLE / 10 ESCALATED / 6 TIMEOUT /
 4 SKIPPED / 1 ERROR** (the ERROR being the `guava#3553` curation mistake noted above).

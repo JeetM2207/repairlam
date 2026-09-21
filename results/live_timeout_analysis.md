@@ -181,3 +181,59 @@ re-attempting it.
   `YodaCondition`/`HidingField`/`UnnecessarilyFullyQualified`/`CheckReturnValue` violations
   across several files. All fixed; verified with a clean (`rm -rf target`) full
   `mvn -pl gson -am test-compile` before launching the re-run.
+
+## `_closest_match()` fix: the tooling gap `guava#3790` surfaced
+
+`guava#3790`'s re-run showed the model twice misreading `_closest_match()`'s fuzzy-match
+"closest real text found in ... PartitionRemoveAll3790Test.java" suggestion as permission to
+edit the test file — rejected both times, wasting 2 of its ~4 real attempt-turns.
+`_apply_edit` already refuses to edit a test file outright, but `_closest_match`'s own
+candidate pool (every line window read this run, via `self.reads`) wasn't filtering test-file
+reads out, so a test-file snippet could still surface as the "closest" match when the actual
+source-file anchor wasn't found. Fixed in `repairlam/tools/registry.py` by excluding any
+`r["path"]` matching the same `"/test/" in path or path.endswith(self.test_file_suffixes)`
+check `_apply_edit` already uses. Full test suite still passes (`pytest tests/`, 6 passed).
+
+## Testing the "turn-budget-limited" hypothesis directly: `netty#4514` re-run at MAX_TURNS=50
+
+`netty#4514` (wave 3, TIMEOUT, 35 turns, 0 edits) was the one TIMEOUT in this whole
+investigation that looked plausibly turn-limited rather than reasoning-limited: the model's
+`identify_bug_method` call landed on a real, relevant class before it ran out of room, but it
+never reached a single accepted edit. Re-run alone with `MAX_TURNS` raised from 30 to 50 (a
+one-off `repairlam.agent.loop.MAX_TURNS` monkeypatch scoped to this single invocation — the
+committed default stays 30 for every other bug, so turn counts already reported elsewhere
+remain comparable).
+
+**Result: ESCALATED, 36 turns — i.e. it stopped on its own well before the raised 50-turn
+cap — 2 edits applied.** Partially confirms, partially complicates the hypothesis:
+
+- **Confirmed:** with more room, it stopped flailing in the search/orientation phase and made
+  real progress. `identify_bug_method` this time correctly landed on `DefaultFullHttpRequest`
+  (not `AbstractByteBuf`, which this document previously and incorrectly guessed as the fix
+  location — the real stack trace, `DefaultFullHttpRequest.equals(DefaultFullHttpRequest.java:228)`,
+  points at `DefaultFullHttpRequest`'s own `equals()` override). Its actual fix direction was
+  reasonable and specific: skip the released-content comparison in `equals()` when
+  `content().refCnt() == 0`, mirroring how `hashCode()` already tolerates it, using
+  `ByteBufUtil.isAccessible(content())` — a real, existing netty utility method, not a
+  hallucinated one.
+- **Complicated — a third infra bug, found along the way:** every `run_tests` call after the
+  first edit hit a genuine, unrelated build failure: `netty-transport-native-unix-common`'s
+  `maven-antrun-plugin` native-code build step failed every time (`gcc`/`make` are both
+  installed; the specific compile failure wasn't root-caused). **The model's own two
+  escalations correctly diagnosed this** — *"The build failed with an Ant BuildException,
+  which is unrelated to the Java code changes"* — an accurate read of a genuinely confusing
+  signal, not a confused one. This can't be worked around by excluding the native module from
+  the Maven reactor: `codec-http` has a real, non-optional transitive dependency on it via
+  `netty-handler` (tried excluding it; broke dependency resolution instead of skipping the
+  native build). **Neither of netty#4514's two runs ever got a real pass/fail signal on the
+  model's actual fix** — both are compromised by this the same way gson's original batch was
+  compromised by the JDK mismatch, for a third, separate infrastructure reason. Not fixed in
+  this session (would need native-toolchain debugging, out of scope for the specific
+  turn-budget question this re-run was testing); flagged as follow-up work.
+
+**Net verdict:** turn budget was a real constraining factor — 0 edits and pure search across
+35 turns versus 2 real edits at the correct location across 36 — so the hypothesis wasn't
+wrong. But it can't be scored as "would have converged to PLAUSIBLE with more turns," only as
+"got meaningfully further with more turns, on a bug whose actual correctness still can't be
+verified here." The turn-budget question and the build-verification question turned out to be
+separable, and this investigation could only cleanly answer the first one.

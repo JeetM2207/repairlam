@@ -362,15 +362,15 @@
       "key": "netty#4514",
       "source_repo": "netty/netty",
       "source_issue_number": 4514,
-      "started": "2026-09-21T12:01:59Z",
-      "outcome": "TIMEOUT",
+      "started": "2026-09-21T12:58:12Z",
+      "outcome": "ESCALATED",
       "fork": "JeetM2207/netty",
-      "issue_url": "https://github.com/JeetM2207/netty/issues/1",
+      "issue_url": "https://github.com/JeetM2207/netty/issues/2",
       "pr_url": null,
       "comment_posted": true,
-      "turns_used": 35,
-      "edits_applied": 0,
-      "note": null
+      "turns_used": 36,
+      "edits_applied": 2,
+      "note": "run with MAX_TURNS raised to 50 (from the default 30) to test whether the original TIMEOUT was turn-budget-limited; see live_timeout_analysis.md"
     }
   ]
 }

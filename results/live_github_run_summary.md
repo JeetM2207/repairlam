@@ -107,7 +107,7 @@ to use bespoke build tooling or have too-thin bug-labeled pools).
 | Bug | Outcome | Turns | Edits | Link |
 |---|---|---|---|---|
 | guava#3553 | ERROR | — | — | [issue #11](https://github.com/JeetM2207/guava/issues/11) — "no failing test at HEAD" |
-| netty#4514 | TIMEOUT | 35 | 0 | [comment](https://github.com/JeetM2207/netty/issues/1) |
+| netty#4514 | ESCALATED | 36 | 2 | [issue #2](https://github.com/JeetM2207/netty/issues/2) — re-run at MAX_TURNS=50, see below |
 
 `guava#3553` is a curation mistake, not a real data point: it's an
 executor-shutdown/future-cancellation timing bug, which is exactly the kind of
@@ -116,14 +116,20 @@ regression test failed reliably by hand (a real 10s timeout, confirmed before
 launching) but passed on the pipeline's own fresh clone — a genuine flake, the
 same mistake already made once with `guava#3790`. Should not have been curated.
 
-`netty#4514` is a more informative TIMEOUT than most in this track: the model
-correctly zeroed in on the actual root-cause method
-(`AbstractByteBuf.equals()`, confirmed via `identify_bug_method` at turn 28 of
-35) — matching the real stack trace exactly — but then spent its remaining
-budget searching for a nonexistent `equals()` override specific to
-`DefaultFullHttpResponse` instead of recognizing the fix belongs in the shared
-`AbstractByteBuf` equality check, and never reached a single accepted edit.
-Most of its 35 turns went into orienting in a codebase an order of magnitude
-larger and more architecturally layered than guava/gson, its first exposure to
-netty. Plausibly turn-budget-limited rather than a pure reasoning gap — unlike
-most other TIMEOUTs investigated in this track.
+`netty#4514` originally TIMED OUT (35 turns, 0 edits) with the model still searching for the
+right file when its budget ran out. That looked turn-budget-limited, so it was re-run alone
+with `MAX_TURNS` raised from 30 to 50 to test that directly (see
+[`live_timeout_analysis.md`](live_timeout_analysis.md) for the full account; the table above
+reflects this corrected re-run, not the original TIMEOUT). Result: ESCALATED at 36 turns (well
+under the raised cap) with 2 real edits — it found the correct file and a reasonable fix
+direction this time, but every `run_tests` call hit a genuine, unrelated netty native-build
+failure the model itself correctly diagnosed as unrelated to its code. Turn budget was a real
+factor (0 edits → 2 real edits at the right location), but a third, separate infrastructure
+issue means neither run ever got a real pass/fail signal on the model's actual fix — not yet
+resolved.
+
+## Grand total across all three waves
+
+**28 bugs run — 7 PLAUSIBLE / 10 ESCALATED / 6 TIMEOUT / 4 SKIPPED / 1 ERROR.** (The "Results"
+table above is batches 1+2 only, 26 bugs; add the 2 wave-3 rows in this section for the true
+total. `netty#4514` counts once, as ESCALATED, reflecting its MAX_TURNS=50 re-run.)
