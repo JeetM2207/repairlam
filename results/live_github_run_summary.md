@@ -91,3 +91,39 @@ a genuine test signal — gson's corrected PLAUSIBLE rate among its 16 actually-
 attempted bugs (excluding the 4 SKIPPED) is 4/16, in the same range as guava's.
 The original "gson: 0/19 PLAUSIBLE" was not a finding about the model; it was
 a broken build.
+
+## Wave 3: 2 more bugs (guava, netty), after guava/gson's easy pool was mined out
+
+After curating ~360 more issues, guava/gson yielded essentially nothing new that
+cleared the quality bar; landed 2 new candidates: `guava#3553` and `netty#4514`
+(netty's first appearance in this track — its own JDK/build were unaffected by
+either of the two infra fixes above; it just needed its own fork and a
+copyright-header/checkstyle fix on the regression test file before it would
+compile). See `results/FINAL_SUMMARY.md` for why the pool dried up (Gradle repos
+are a hard infra blocker on this cluster — no outbound network access to fetch
+the Gradle wrapper at all — and several other well-known Maven repos turned out
+to use bespoke build tooling or have too-thin bug-labeled pools).
+
+| Bug | Outcome | Turns | Edits | Link |
+|---|---|---|---|---|
+| guava#3553 | ERROR | — | — | [issue #11](https://github.com/JeetM2207/guava/issues/11) — "no failing test at HEAD" |
+| netty#4514 | TIMEOUT | 35 | 0 | [comment](https://github.com/JeetM2207/netty/issues/1) |
+
+`guava#3553` is a curation mistake, not a real data point: it's an
+executor-shutdown/future-cancellation timing bug, which is exactly the kind of
+concurrency-dependent bug this track's own stated criteria say to exclude. The
+regression test failed reliably by hand (a real 10s timeout, confirmed before
+launching) but passed on the pipeline's own fresh clone — a genuine flake, the
+same mistake already made once with `guava#3790`. Should not have been curated.
+
+`netty#4514` is a more informative TIMEOUT than most in this track: the model
+correctly zeroed in on the actual root-cause method
+(`AbstractByteBuf.equals()`, confirmed via `identify_bug_method` at turn 28 of
+35) — matching the real stack trace exactly — but then spent its remaining
+budget searching for a nonexistent `equals()` override specific to
+`DefaultFullHttpResponse` instead of recognizing the fix belongs in the shared
+`AbstractByteBuf` equality check, and never reached a single accepted edit.
+Most of its 35 turns went into orienting in a codebase an order of magnitude
+larger and more architecturally layered than guava/gson, its first exposure to
+netty. Plausibly turn-budget-limited rather than a pure reasoning gap — unlike
+most other TIMEOUTs investigated in this track.

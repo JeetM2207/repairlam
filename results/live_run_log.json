@@ -343,6 +343,34 @@
       "turns_used": 34,
       "edits_applied": 4,
       "note": null
+    },
+    {
+      "key": "guava#3553",
+      "source_repo": "google/guava",
+      "source_issue_number": 3553,
+      "started": "2026-09-21T11:58:24Z",
+      "outcome": "ERROR",
+      "fork": "JeetM2207/guava",
+      "issue_url": "https://github.com/JeetM2207/guava/issues/11",
+      "pr_url": null,
+      "comment_posted": null,
+      "turns_used": null,
+      "edits_applied": null,
+      "note": "no failing test at HEAD"
+    },
+    {
+      "key": "netty#4514",
+      "source_repo": "netty/netty",
+      "source_issue_number": 4514,
+      "started": "2026-09-21T12:01:59Z",
+      "outcome": "TIMEOUT",
+      "fork": "JeetM2207/netty",
+      "issue_url": "https://github.com/JeetM2207/netty/issues/1",
+      "pr_url": null,
+      "comment_posted": true,
+      "turns_used": 35,
+      "edits_applied": 0,
+      "note": null
     }
   ]
 }

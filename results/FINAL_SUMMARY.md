@@ -1,6 +1,6 @@
 # Module 4 (Live GitHub Issues): Summary as of this session
 
-Snapshot as of the corrected re-run — more batches are planned, so this reflects the
+Snapshot after three curation/run batches — more may follow, so this reflects the
 current state, not a permanent endpoint. See [`live_github_run_summary.md`](live_github_run_summary.md)
 for the per-bug table and [`live_timeout_analysis.md`](live_timeout_analysis.md) for the
 infrastructure-bug investigation this summary draws on.
@@ -49,10 +49,11 @@ depended on Android/JDK-version-specific runtime behavior this cluster can't rel
 reproduce. `square/okhttp`/`retrofit` were skipped after discovering both had been
 transferred to an unfamiliar GitHub org since prior knowledge of them.
 
-## Results to date: 26 bugs run (2 batches, across guava, gson, jackson-databind)
+## Results to date: 28 bugs run (3 batches, across guava, gson, jackson-databind, netty)
 
-**7 PLAUSIBLE (real PRs) / 9 ESCALATED / 6 TIMEOUT / 4 SKIPPED** (not reproducible on
-re-verify). Full table: [`live_github_run_summary.md`](live_github_run_summary.md).
+**7 PLAUSIBLE (real PRs) / 9 ESCALATED / 7 TIMEOUT / 4 SKIPPED (not reproducible on
+re-verify) / 1 ERROR** (a curation mistake, see below). Full table:
+[`live_github_run_summary.md`](live_github_run_summary.md).
 
 The first full run of the second batch scored a misleadingly bad 3 PLAUSIBLE / 7 ESCALATED /
 16 TIMEOUT. Investigating the TIMEOUTs found two infrastructure bugs, not model weaknesses:
@@ -78,8 +79,24 @@ from 3 to 7.
 - 4 gson bugs came back SKIPPED (regression test no longer reproduces the bug). Most likely
   explanation: old issues silently fixed by a later unrelated refactor, never closed — but
   not fully verified against a subtly-wrong test on this session's part.
-- `guava#3790` reached the real file on re-run (the `android/`-mirror fix worked) but still
-  only reached ESCALATED, not PLAUSIBLE — under active investigation (see the guava#3790
-  deep-dive this session is also producing).
-- A third curation wave (aiming for 20-30 more bugs, more repos) is in progress as of this
-  summary; check `live_run_log.json` and `live_github_run_summary.md` for the latest counts.
+- `guava#3790` deep-dive complete: the escalation was a system-forced safety-net trigger, not
+  a real model question, and the bug's "correct fix" turned out to be genuinely unresolved
+  even among guava's own maintainers (checked the real upstream thread). It should have been
+  excluded from curation on the same no-confirmed-fix ground used elsewhere and is no longer
+  treated as a fair PLAUSIBLE/ESCALATED/TIMEOUT data point. A real, fixable tooling gap was
+  found along the way: `_closest_match()`'s fuzzy suggestion pointed the model at the
+  regression test file, which it misread as permission to edit it (rejected, twice) — not yet
+  fixed, unlike the two infra bugs above.
+- A third curation wave landed only 2 new bugs (`guava#3553`, `netty#4514`) — guava/gson's
+  easy pool was genuinely exhausted after ~360 issues checked total, and Gradle-based repos
+  (mockito, moshi, spring-framework, elasticsearch) turned out to be a hard infra blocker: no
+  outbound network access on this cluster to fetch the Gradle wrapper distribution at all.
+  `guava#3553` repeated the `guava#3790` mistake — a timing-dependent bug that should have
+  been excluded, and it errored out on a real flake rather than producing a fair result.
+  `netty#4514` is a more informative TIMEOUT: the model correctly identified the true
+  root-cause method (`AbstractByteBuf.equals()`) by turn 28 of 35, then ran out of budget
+  chasing a wrong lead instead — plausibly turn-limited on first exposure to a much larger,
+  unfamiliar codebase, rather than a pure reasoning gap.
+
+**Final tally across all three waves: 28 bugs run — 7 PLAUSIBLE / 9 ESCALATED / 7 TIMEOUT /
+4 SKIPPED / 1 ERROR** (the ERROR being the `guava#3553` curation mistake noted above).
