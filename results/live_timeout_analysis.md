@@ -96,15 +96,74 @@ tracking issue — a real and common occurrence, not something this pipeline can
 from a subtly-wrong regression test without deeper per-bug investigation. Flagged here as an
 open uncertainty rather than asserted as fact.
 
-## Note on `guava#3790`'s hypothesis
+## Deep dive: `guava#3790` re-run (corrected earlier claim below)
 
 The earlier claim that `guava#3790` "looked winnable" once the `android/` bug was fixed was a
-prediction based on its last (inert) edit attempt looking reasonable, not a guarantee. The
-re-run result: ESCALATED (0 edits applied, 26 turns) — the model reached the real file this
-time but escalated rather than converging on a fix within budget. The hypothesis was
-partially right (it stopped wasting turns on the inert `android/` copy) and partially wrong
-(it still didn't land a PLAUSIBLE fix) — worth noting as a caution against treating a
-plausible-looking last attempt as a reliable predictor of outcome.
+prediction based on its last (inert) edit attempt looking reasonable, not a guarantee, and it
+turned out to be substantially wrong once actually checked. Re-run result: ESCALATED, 0 edits
+applied, 26 turns, `wall_clock_s: 279.1`.
+
+**The escalation comment is not a real question.** It's the FSM's own safety-net firing after
+the model exhausted its read/attempt budget in TRY_FIX without ever landing a single accepted
+edit — `run_fsm_core` force-escalates in this situation independently of the model's own
+`escalate` tool call (which stays gated behind 2 real fix attempts). The full comment posted
+to [the issue](https://github.com/JeetM2207/guava/issues/9) is the generic template:
+
+> 🤖 repairlam attempted this issue and escalated.
+>
+> Edits attempted: 0
+>
+> **Reason:**
+> read limit exceeded without any edit attempt
+>
+> _No pull request was opened. This comment was posted automatically; a human should take it
+> from here._
+
+**What actually happened, turn by turn:** the `search_repo`/`android/` fix worked — this run
+correctly landed on the real `guava/src/com/google/common/collect/Lists.java` (unlike the
+original run, which never left the `android/` mirror). But every one of its 4 `apply_edit`
+attempts was rejected:
+
+- Turns 16 and 26 both guessed `find` text that was never actually read in this
+  conversation — `if (current.isEmpty()) {` and `if (subList.isEmpty()) {\n listIterator.remove();\n}`
+  — plausible-sounding guava-style code, but not present anywhere in the 1219-line file. This
+  is the same hallucinated-anchor failure mode noted as "recently fixed" in `CLAUDE.md`,
+  recurring here: it read lines 100-250 of `Lists.java` and never located the actual
+  `Partition`/iterator code (which is much further down the file), then guessed instead of
+  reading further.
+- Turns 19 and 25, after each hallucination failure, misread the tool's own
+  `_closest_match()` "closest real text found in ... PartitionRemoveAll3790Test.java" fuzzy
+  suggestion as permission to edit the *test* file, and tried to — twice, both correctly
+  rejected ("editing test files is not allowed"). This is a real, fixable tooling gap:
+  `_closest_match()` should exclude test-file matches when the target path is a source file,
+  the same way `search_repo`'s ranking already deprioritizes tests — right now it's actively
+  misleading the model into a rule violation instead of helping it find the real anchor.
+
+**What the actual correct fix is: genuinely unresolved, even upstream.** Checking the real
+`google/guava#3790` comment thread (which should have been checked more carefully during
+curation) shows guava's own maintainers never reached consensus. `dimo414` and `netdpb`
+diagnose the root cause precisely: `Lists.java`'s `Partition` inner class extends
+`AbstractList` but doesn't implement the `modCount`-based comodification tracking that gives
+`ArrayList`'s iterator its fail-fast `ConcurrentModificationException` behavior, so a
+structural mutation during iteration surfaces as a confusing `NoSuchElementException` instead
+of the well-documented, expected `ConcurrentModificationException`. `netdpb`'s suggested
+direction — make `hasNext()` call `checkForComodification()` — is the closest thing to an
+informed fix proposal in the thread, but it was never implemented, confirmed, or turned into
+a PR; the thread ends in unresolved back-and-forth about what the "expected" behavior even
+is. **This bug should have been excluded from curation on the same "no maintainer-confirmed
+fix" ground used to drop `gson#2816`/`guava#1898`/`guava#6226`** — that check was applied
+inconsistently. Retroactively marking it: not a fair PLAUSIBLE/ESCALATED/TIMEOUT data point.
+
+**Verdict on "small prompt nudge vs. genuine reasoning gap": both, layered, and not winnable
+as this bug is currently specified.** Fixing `_closest_match()` to stop suggesting test files
+is a cheap, worthwhile win in the same class as the two already-shipped fixes, and would give
+the model 2 more real turns instead of 2 wasted rejections. But that alone wouldn't convert
+this to PLAUSIBLE: the model never read far enough into `Lists.java` to find the real
+`Partition` class, its hypothesized direction ("skip empty sublists") doesn't match the one
+informed technical lead anyone (including guava's own maintainers) has proposed
+(`checkForComodification()`/CME semantics), and the bug's correct resolution was never
+actually settled upstream. Recommend dropping `guava#3790` from future scoring rather than
+re-attempting it.
 
 ## Two other bugs introduced along the way, both caught and fixed before the re-run
 
