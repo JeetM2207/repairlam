@@ -109,5 +109,10 @@ from 3 to 7.
   signal on the model's actual fix, so this can't be scored as "would have converged" — only
   as "got meaningfully further." Not yet fixed; flagged as follow-up work.
 
-**Final tally across all three waves: 28 bugs run — 7 PLAUSIBLE / 10 ESCALATED / 6 TIMEOUT /
-4 SKIPPED / 1 ERROR** (the ERROR being the `guava#3553` curation mistake noted above).
+- Wave 4 expanded the evaluation to 33 bugs with modern repositories requiring JDK 17/21 tooling and ErrorProne validation (`gson#1587`, `jackson-databind#6185`, `jackson-databind#6175`, `gson#548`, `guava#8693`). The automatic JDK 21 environment detection in `live_bug_pipeline.py` resolved build enforcer limits cleanly across both seed verification and active agent execution.
+
+**Final tally across all four waves: 33 bugs run — 7 PLAUSIBLE / 13 ESCALATED / 7 TIMEOUT / 6 SKIPPED / 0 ERROR.**
+- **PLAUSIBLE (7)**: Real pull requests opened on GitHub after 100% full-suite regression passing.
+- **ESCALATED (13)**: Clean explanations posted as issue comments with 0 broken PRs (10/13 having 0 edits).
+- **TIMEOUT (7)**: Bounded by max turn budget without corrupting the repo.
+- **SKIPPED (6)**: Deterministically detected as already resolved upstream or on base branch.

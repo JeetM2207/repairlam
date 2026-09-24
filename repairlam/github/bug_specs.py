@@ -1146,3 +1146,190 @@ public class FullHttpMessageEqualsHashCodeRefCnt4514Test {
         test_cmd=_netty_cmd("FullHttpMessageEqualsHashCodeRefCnt4514Test"),
     ),
 ]
+
+
+# Wave 4: Fresh, rigorously curated real-world bugs
+SPECS += [
+    BugSpec(
+        key="gson#1587",
+        source_repo="google/gson",
+        source_issue_number=1587,
+        base_branch="main",
+        new_test_file="gson/src/test/java/com/google/gson/functional/UriNonAscii1587Test.java",
+        new_test_file_content="""\
+package com.google.gson.functional;
+
+import static com.google.common.truth.Truth.assertThat;
+
+import com.google.gson.Gson;
+import java.net.URI;
+import org.junit.Test;
+
+// https://github.com/google/gson/issues/1587: URI type adapter percent-encodes non-ASCII
+// characters on write() (calling toASCIIString()), causing round-trip identity to fail
+// for valid international URIs (e.g. s3://bucket/path/Kankyō.png).
+public class UriNonAscii1587Test {
+  @Test
+  public void testUriRoundTripWithNonAscii() throws Exception {
+    Gson gson = new Gson();
+    URI uri = new URI("s3://bucket/path/Kankyō.png");
+    String json = gson.toJson(uri);
+    URI roundTripUri = gson.fromJson(json, URI.class);
+    assertThat(roundTripUri).isEqualTo(uri);
+    assertThat(roundTripUri.toString()).isEqualTo(uri.toString());
+  }
+}
+""",
+        test_cmd=_gson_cmd("UriNonAscii1587Test"),
+    ),
+    BugSpec(
+        key="jackson-databind#6185",
+        source_repo="FasterXML/jackson-databind",
+        source_issue_number=6185,
+        base_branch="2.18",
+        new_test_file="src/test/java/com/fasterxml/jackson/databind/ser/jdk/InetSocketAddressIPv6Unresolved6185Test.java",
+        new_test_file_content="""\
+package com.fasterxml.jackson.databind.ser.jdk;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.testutil.DatabindTestUtil;
+
+// https://github.com/FasterXML/jackson-databind/issues/6185:
+// Unresolved IPv6 literal host name must be bracketed in InetSocketAddress serialization
+public class InetSocketAddressIPv6Unresolved6185Test extends DatabindTestUtil {
+    private final ObjectMapper MAPPER = new ObjectMapper();
+
+    @Test
+    public void testInetSocketAddressIPv6Unresolved() throws IOException {
+        assertEquals(q("[2001:db8::1]:443"),
+                MAPPER.writeValueAsString(InetSocketAddress.createUnresolved("2001:db8::1", 443)));
+        assertEquals(q("[2001:db8::1]:443"),
+                MAPPER.writeValueAsString(InetSocketAddress.createUnresolved("[2001:db8::1]", 443)));
+        InetSocketAddress addr = MAPPER.readValue(q("[2001:db8::1]:443"), InetSocketAddress.class);
+        String json = MAPPER.writeValueAsString(addr);
+        assertEquals(q("[2001:db8::1]:443"), json);
+        InetSocketAddress result = MAPPER.readValue(json, InetSocketAddress.class);
+        assertEquals(addr.getHostName(), result.getHostName());
+        assertEquals(443, result.getPort());
+    }
+}
+""",
+        test_cmd=["mvn", "-q", "-Dtest=InetSocketAddressIPv6Unresolved6185Test",
+                  MAVEN_NO_FAIL_IF_NO_TESTS, "test"],
+    ),
+    BugSpec(
+        key="jackson-databind#6175",
+        source_repo="FasterXML/jackson-databind",
+        source_issue_number=6175,
+        base_branch="3.x",
+        new_test_file="src/test/java/tools/jackson/databind/ext/xml/QNameObjectFormTyping6175Test.java",
+        new_test_file_content="""\
+package tools.jackson.databind.ext.xml;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
+import javax.xml.namespace.QName;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.testutil.DatabindTestUtil;
+
+// https://github.com/FasterXML/jackson-databind/issues/6175:
+// Object-shaped QName must round-trip when polymorphic type id is written as a property
+public class QNameObjectFormTyping6175Test extends DatabindTestUtil {
+    @Test
+    public void testQNameObjectFormWithAsPropertyTyping() throws Exception {
+        QName original = new QName("http://namespace", "test", "p");
+        ObjectMapper mapper = jsonMapperBuilder()
+                .activateDefaultTyping(NoCheckSubTypeValidator.instance,
+                        DefaultTyping.NON_FINAL, JsonTypeInfo.As.PROPERTY)
+                .withConfigOverride(QName.class,
+                        cfg -> cfg.setFormat(JsonFormat.Value.forShape(JsonFormat.Shape.OBJECT)))
+                .build();
+
+        Map<String, Object> value = new LinkedHashMap<>();
+        value.put("qname", original);
+
+        String json = mapper.writeValueAsString(value);
+        QName back = (QName) mapper.readValue(json, Map.class).get("qname");
+        assertEquals(original.getLocalPart(), back.getLocalPart());
+        assertEquals(original.getNamespaceURI(), back.getNamespaceURI());
+        assertEquals(original.getPrefix(), back.getPrefix());
+    }
+}
+""",
+        test_cmd=["mvn", "-q", "-Dtest=QNameObjectFormTyping6175Test",
+                  MAVEN_NO_FAIL_IF_NO_TESTS, "test"],
+    ),
+    BugSpec(
+        key="gson#548",
+        source_repo="google/gson",
+        source_issue_number=548,
+        base_branch="main",
+        new_test_file="gson/src/test/java/com/google/gson/functional/IoExceptionWrappedInJsonIoException548Test.java",
+        new_test_file_content="""\
+package com.google.gson.functional;
+
+import static org.junit.Assert.assertThrows;
+
+import com.google.gson.Gson;
+import com.google.gson.JsonIOException;
+import java.io.IOException;
+import java.io.Reader;
+import org.junit.Test;
+
+// https://github.com/google/gson/issues/548:
+// Gson.fromJson(Reader, Type) should wrap underlying IOExceptions in JsonIOException,
+// not JsonSyntaxException. Network and I/O errors are distinct from JSON syntax errors.
+public class IoExceptionWrappedInJsonIoException548Test {
+  @Test
+  public void testIOExceptionWrappedInJsonIOException() {
+    Gson gson = new Gson();
+    Reader reader = new Reader() {
+      @Override
+      public int read(char[] cbuf, int off, int len) throws IOException {
+        throw new IOException("simulated IO error");
+      }
+      @Override
+      public void close() {}
+    };
+    assertThrows(JsonIOException.class, () -> gson.fromJson(reader, Object.class));
+  }
+}
+""",
+        test_cmd=_gson_cmd("IoExceptionWrappedInJsonIoException548Test"),
+    ),
+    BugSpec(
+        key="guava#8693",
+        source_repo="google/guava",
+        source_issue_number=8693,
+        base_branch="master",
+        new_test_file="guava-tests/test/com/google/common/collect/ImmutableClassToInstanceMapSerial8693Test.java",
+        new_test_file_content="""\
+package com.google.common.collect;
+
+import static org.junit.Assert.assertEquals;
+
+import java.io.ObjectStreamClass;
+import org.junit.Test;
+
+// https://github.com/google/guava/issues/8693:
+// ImmutableClassToInstanceMap is missing an explicit serialVersionUID = 0,
+// causing serialization incompatibility across Guava releases.
+public class ImmutableClassToInstanceMapSerial8693Test {
+  @Test
+  public void testSerialVersionUIDMatchesMutableVersion() {
+    long actualUid = ObjectStreamClass.lookup(ImmutableClassToInstanceMap.class).getSerialVersionUID();
+    assertEquals("ImmutableClassToInstanceMap must declare serialVersionUID = 0 to ensure stable serialization", 0L, actualUid);
+  }
+}
+""",
+        test_cmd=_guava_cmd("ImmutableClassToInstanceMapSerial8693Test"),
+    ),
+]

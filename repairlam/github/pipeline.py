@@ -16,7 +16,7 @@ from repairlam.events import EventLog
 from repairlam.tools.registry import Dispatcher
 from repairlam.agent.loop import run_fsm_core, ask, server_ctx, MODEL
 from repairlam.github.issue_client import GithubClient
-from repairlam.github.repo_env import RepoEnv
+from repairlam.github.repo_env import RepoEnv, parse_maven_failing, parse_pytest_failing
 
 BTP = os.path.expanduser("~/btp")
 WORK = f"{BTP}/repairlam/github_workspaces"
@@ -92,8 +92,10 @@ def run_on_issue(repo_full_name, issue_number, token, test_cmd,
     workdir = f"{WORK}/{run_id}"
     branch = f"repairlam/issue-{issue_number}"
 
+    parser = parse_maven_failing if (test_cmd and test_cmd[0] == "mvn") else parse_pytest_failing
     env = RepoEnv(test_cmd=test_cmd, build_cmd=build_cmd,
-                  target_test_cmd=target_test_cmd)
+                  target_test_cmd=target_test_cmd,
+                  failing_test_parser=parser)
     bug_id = f"{repo_full_name}#{issue_number}"
     print(f"\n=== {bug_id} ===", flush=True)
 

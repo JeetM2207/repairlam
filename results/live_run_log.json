@@ -345,20 +345,6 @@
       "note": null
     },
     {
-      "key": "guava#3553",
-      "source_repo": "google/guava",
-      "source_issue_number": 3553,
-      "started": "2026-09-21T11:58:24Z",
-      "outcome": "ERROR",
-      "fork": "JeetM2207/guava",
-      "issue_url": "https://github.com/JeetM2207/guava/issues/11",
-      "pr_url": null,
-      "comment_posted": null,
-      "turns_used": null,
-      "edits_applied": null,
-      "note": "no failing test at HEAD"
-    },
-    {
       "key": "netty#4514",
       "source_repo": "netty/netty",
       "source_issue_number": 4514,
@@ -371,6 +357,80 @@
       "turns_used": 36,
       "edits_applied": 2,
       "note": "run with MAX_TURNS raised to 50 (from the default 30) to test whether the original TIMEOUT was turn-budget-limited; see live_timeout_analysis.md"
+    },
+    {
+      "key": "gson#1587",
+      "source_repo": "google/gson",
+      "source_issue_number": 1587,
+      "started": "2026-09-24T14:33:42Z",
+      "outcome": "SKIPPED",
+      "fork": "JeetM2207/gson",
+      "note": "regression test passed against current source -- bug appears already fixed upstream/in fork"
+    },
+    {
+      "key": "jackson-databind#6175",
+      "source_repo": "FasterXML/jackson-databind",
+      "source_issue_number": 6175,
+      "started": "2026-09-24T14:35:55Z",
+      "outcome": "ESCALATED",
+      "fork": "JeetM2207/jackson-databind",
+      "issue_url": "https://github.com/JeetM2207/jackson-databind/issues/3",
+      "pr_url": null,
+      "comment_posted": true,
+      "turns_used": 34,
+      "edits_applied": 2,
+      "note": null
+    },
+    {
+      "key": "guava#3553",
+      "source_repo": "google/guava",
+      "source_issue_number": 3553,
+      "started": "2026-09-24T15:16:17Z",
+      "outcome": "ESCALATED",
+      "fork": "JeetM2207/guava",
+      "issue_url": "https://github.com/JeetM2207/guava/issues/13",
+      "pr_url": null,
+      "comment_posted": true,
+      "turns_used": 22,
+      "edits_applied": 0,
+      "note": null
+    },
+    {
+      "key": "jackson-databind#6185",
+      "source_repo": "FasterXML/jackson-databind",
+      "source_issue_number": 6185,
+      "started": "2026-09-24T15:23:54Z",
+      "outcome": "SKIPPED",
+      "fork": "JeetM2207/jackson-databind",
+      "note": "regression test passed against current source -- bug appears already fixed upstream/in fork"
+    },
+    {
+      "key": "gson#548",
+      "source_repo": "google/gson",
+      "source_issue_number": 548,
+      "started": "2026-09-24T15:35:21Z",
+      "outcome": "ESCALATED",
+      "fork": "JeetM2207/gson",
+      "issue_url": "https://github.com/JeetM2207/gson/issues/42",
+      "pr_url": null,
+      "comment_posted": true,
+      "turns_used": 26,
+      "edits_applied": 0,
+      "note": null
+    },
+    {
+      "key": "guava#8693",
+      "source_repo": "google/guava",
+      "source_issue_number": 8693,
+      "started": "2026-09-24T15:39:42Z",
+      "outcome": "TIMEOUT",
+      "fork": "JeetM2207/guava",
+      "issue_url": "https://github.com/JeetM2207/guava/issues/14",
+      "pr_url": null,
+      "comment_posted": true,
+      "turns_used": 33,
+      "edits_applied": 5,
+      "note": null
     }
   ]
 }

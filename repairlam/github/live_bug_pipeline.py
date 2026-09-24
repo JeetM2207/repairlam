@@ -35,6 +35,19 @@ ROOT = Path(__file__).resolve().parents[2]
 LOG_PATH = ROOT / "results" / "live_run_log.json"
 WORK = ROOT / "github_workspaces" / "seed"
 
+# Modern repos (Gson 2.14+, Jackson 3.x) require JDK 17+ or 21.
+# If a dedicated modern JDK exists on the host, configure it.
+for _jdk in [
+    Path("/home/23ucs603/miniconda3/envs/jdk21tools"),
+    Path("/usr/lib/jvm/java-21-openjdk"),
+    Path("/usr/lib/jvm/java-17-openjdk"),
+]:
+    if _jdk.exists():
+        import os
+        os.environ["JAVA_HOME"] = str(_jdk)
+        os.environ["PATH"] = f"{_jdk}/bin:{os.environ.get('PATH', '')}"
+        break
+
 
 @dataclass
 class BugSpec:
@@ -127,15 +140,14 @@ def _push_to_base(workdir: Path, base_branch: str, message: str):
     committed to base_branch by an earlier attempt has nothing new to stage
     -- that's success (the desired state already holds), not an error."""
     _run(["git", "add", "-A"], cwd=str(workdir), timeout=60)
-    rc, out, err = _run(["git", "status", "--porcelain", "--cached"],
+    rc, out, err = _run(["git", "diff", "--cached", "--name-only"],
                         cwd=str(workdir), timeout=30)
-    if not out.strip():
-        return
-    rc, out, err = _run(["git", "-c", "user.name=repairlam-bot",
-                         "-c", "user.email=repairlam-bot@users.noreply.github.com",
-                         "commit", "-m", message], cwd=str(workdir), timeout=60)
-    if rc != 0:
-        raise RuntimeError(f"commit failed: {(out + err)[-1000:]}")
+    if out.strip():
+        rc, out, err = _run(["git", "-c", "user.name=repairlam-bot",
+                             "-c", "user.email=repairlam-bot@users.noreply.github.com",
+                             "commit", "-m", message], cwd=str(workdir), timeout=60)
+        if rc != 0:
+            raise RuntimeError(f"commit failed: {(out + err)[-1000:]}")
     rc, out, err = _run(["git", "push", "origin", base_branch], cwd=str(workdir),
                         timeout=120, extra_env=git_auth_env())
     if rc != 0:
