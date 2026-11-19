@@ -241,8 +241,12 @@ def main(specs, token, force_keys=None):
 if __name__ == "__main__":
     import os
     import sys
+    from dotenv import load_dotenv
+    load_dotenv(ROOT / ".env", override=True)
     from repairlam.github.bug_specs import SPECS
-    token = os.environ["GITHUB_TOKEN"]
+    token = os.environ.get("GITHUB_TOKEN")
+    if not token:
+        raise RuntimeError("GITHUB_TOKEN not found in environment or .env")
     # optional: force-rerun specific keys, e.g.
     #   python -m repairlam.github.live_bug_pipeline gson#600 guava#3790
     force = set(sys.argv[1:]) if len(sys.argv) > 1 else None

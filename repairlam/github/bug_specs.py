@@ -146,6 +146,13 @@ def _guava_cmd(klass):
             MAVEN_NO_FAIL_IF_NO_TESTS, "test"]
 
 
+def _csv_cmd(klass):
+    return ["env", f"JAVA_HOME={_JDK21_HOME}",
+            f"PATH={_JDK21_HOME}/bin:/home/23ucs603/miniconda3/envs/repairlam/bin:/usr/bin:/bin",
+            _MVN, "-q", f"-Dtest={klass}",
+            MAVEN_NO_FAIL_IF_NO_TESTS, "test"]
+
+
 # Second batch: curated with a faster per-candidate filter (open + bug/defect
 # label + a clear repro or fix proposal in the body/comments + single-method
 # scope), rather than the deep maintainer-thread read used for the first
@@ -1331,5 +1338,98 @@ public class ImmutableClassToInstanceMapSerial8693Test {
 }
 """,
         test_cmd=_guava_cmd("ImmutableClassToInstanceMapSerial8693Test"),
+    ),
+    BugSpec(
+        key="gson#3047",
+        source_repo="google/gson",
+        source_issue_number=3047,
+        base_branch="main",
+        new_test_file="gson/src/test/java/com/google/gson/functional/AtomicIntegerArrayNull3047Test.java",
+        new_test_file_content="""\
+package com.google.gson.functional;
+
+import static org.junit.Assert.assertThrows;
+import static com.google.common.truth.Truth.assertThat;
+
+import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
+import java.util.concurrent.atomic.AtomicIntegerArray;
+import org.junit.Test;
+
+// https://github.com/google/gson/issues/3047:
+// Deserializing a JSON null into an AtomicIntegerArray must throw JsonSyntaxException,
+// symmetric to AtomicLongArray fix in #3038.
+@SuppressWarnings("all")
+public class AtomicIntegerArrayNull3047Test {
+  @Test
+  public void testAtomicIntegerArrayWithNullElement() {
+    JsonSyntaxException e =
+        assertThrows(
+            JsonSyntaxException.class, () -> new Gson().fromJson("[1,null,3]", AtomicIntegerArray.class));
+    assertThat(e)
+        .hasMessageThat()
+        .isEqualTo("null is not a valid AtomicIntegerArray element; at path $[1]");
+  }
+}
+""",
+        test_cmd=_gson_cmd("AtomicIntegerArrayNull3047Test"),
+    ),
+    BugSpec(
+        key="commons-csv#1",
+        source_repo="apache/commons-csv",
+        source_issue_number=1,
+        base_branch="master",
+        test_file="src/test/java/org/apache/commons/csv/CSVPrinterTest.java",
+        test_insert_after="class CSVPrinterTest {",
+        test_method="""
+
+    // https://github.com/apache/commons-csv/issues/1:
+    // Quote values starting with comment marker in minimal quote mode so parser does not drop them
+    @Test
+    void testQuoteCommentMarkerFirstChar() throws IOException {
+        final CSVFormat format = CSVFormat.DEFAULT.builder().setCommentMarker(';').get();
+        final StringWriter sw = new StringWriter();
+        final String col1 = ";comment-like";
+        try (CSVPrinter printer = new CSVPrinter(sw, format)) {
+            printer.printComment("a real comment");
+            printer.printRecord(col1, "b");
+            printer.printRecord("a;b", ";c");
+        }
+        final String string = sw.toString();
+        assertEquals("; a real comment" + RECORD_SEPARATOR +
+                "\\";comment-like\\",b" + RECORD_SEPARATOR +
+                "a;b,\\";c\\"" + RECORD_SEPARATOR, string);
+        try (CSVParser parser = CSVParser.parse(string, format)) {
+            final java.util.List<CSVRecord> records = parser.getRecords();
+            assertEquals(2, records.size());
+            assertArrayEquals(new String[] {col1, "b"}, records.get(0).values());
+            assertArrayEquals(new String[] {"a;b", ";c"}, records.get(1).values());
+        }
+    }
+""",
+        test_cmd=_csv_cmd("CSVPrinterTest#testQuoteCommentMarkerFirstChar"),
+    ),
+    BugSpec(
+        key="commons-csv#2",
+        source_repo="apache/commons-csv",
+        source_issue_number=2,
+        base_branch="master",
+        test_file="src/test/java/org/apache/commons/csv/CSVRecordTest.java",
+        test_insert_after="class CSVRecordTest {",
+        test_method="""
+
+    // https://github.com/apache/commons-csv/issues/2:
+    // isMapped(null) and isSet(null) should return false instead of NPE with ignoreHeaderCase
+    @Test
+    void testIsMappedNullWithIgnoreHeaderCase() throws java.io.IOException {
+        final CSVFormat format = CSVFormat.DEFAULT.builder().setHeader("A", "B").setIgnoreHeaderCase(true).get();
+        try (CSVParser parser = CSVParser.parse("1,2", format)) {
+            final CSVRecord record = parser.iterator().next();
+            org.junit.jupiter.api.Assertions.assertFalse(record.isMapped(null));
+            org.junit.jupiter.api.Assertions.assertFalse(record.isSet(null));
+        }
+    }
+""",
+        test_cmd=_csv_cmd("CSVRecordTest#testIsMappedNullWithIgnoreHeaderCase"),
     ),
 ]

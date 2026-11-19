@@ -1,0 +1,40 @@
+import subprocess
+
+workdir = "/home/23ucs603/btp/repairlam/github_workspaces/seed/gson_600"
+test_file = workdir + "/gson/src/test/java/com/google/gson/functional/Gson576Test.java"
+
+content = """package com.google.gson.functional;
+
+import static org.junit.Assert.assertEquals;
+import com.google.gson.Gson;
+import org.junit.Test;
+
+public class Gson576Test {
+  public static class TestResource {
+    public int id;
+  }
+  public static class TestMetadata<R extends TestResource> {
+    public R resource;
+  }
+
+  @Test
+  public void testNarrowing() {
+    Gson gson = new Gson();
+    TestMetadata metadata = gson.fromJson("{\\"resource\\":{\\"id\\":17}}", new TestMetadata<TestResource>().getClass());
+    assertEquals(17, metadata.resource.id);
+  }
+}
+"""
+
+with open(test_file, "w") as f:
+    f.write(content)
+
+_JDK21_HOME = "/home/23ucs603/miniconda3/envs/jdk21tools"
+_MVN = "/home/23ucs603/miniconda3/envs/repairlam/bin/mvn"
+cmd = ["env", f"JAVA_HOME={_JDK21_HOME}",
+       f"PATH={_JDK21_HOME}/bin:/home/23ucs603/miniconda3/envs/repairlam/bin:/usr/bin:/bin",
+       _MVN, "-q", "-pl", "gson", "-am", "-Dtest=Gson576Test", "test"]
+
+p = subprocess.run(cmd, cwd=workdir, capture_output=True, text=True)
+print("Return code:", p.returncode)
+print("Output:\n", (p.stdout + p.stderr)[-2000:])

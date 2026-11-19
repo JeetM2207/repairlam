@@ -122,7 +122,9 @@ def next_state(state, tool, result, attempts):
     return state
 
 
-def run_fsm_core(disp, ctx, hint_file, log, bug_id, env, extra_context=None):
+def run_fsm_core(disp, ctx, hint_file, log, bug_id, env, extra_context=None,
+                 initial_state="UNDERSTAND", initial_history=None, initial_attempts=0,
+                 max_turns=MAX_TURNS):
     """The reusable FSM state machine: UNDERSTAND -> COLLECT -> TRY_FIX ->
     REFLECT, one action per turn, against an already-constructed Dispatcher
     (checkout/compile/initial test run already done by the caller). Used by
@@ -142,8 +144,8 @@ def run_fsm_core(disp, ctx, hint_file, log, bug_id, env, extra_context=None):
     a live repo's normal test command).
     """
     sysmsg = system_prompt()
-    history = []
-    state, attempts, outcome = "UNDERSTAND", 0, "FAILED"
+    history = list(initial_history) if initial_history else []
+    state, attempts, outcome = initial_state, initial_attempts, "FAILED"
     reads_since_edit = 0
     collect_reads = 0
     collect_last_search_pattern = None
@@ -152,7 +154,7 @@ def run_fsm_core(disp, ctx, hint_file, log, bug_id, env, extra_context=None):
     escalation = None
 
     turn = 0
-    while turn < MAX_TURNS:
+    while turn < max_turns:
         turn += 1
 
         if state == "COLLECT" and collect_reads >= COLLECT_FORCE_TURN:
